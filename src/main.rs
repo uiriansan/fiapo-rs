@@ -3,7 +3,7 @@ use gtk::{Application, glib};
 use gtk4 as gtk;
 
 mod core;
-use core::utils::{image, styles};
+use core::utils::styles;
 use core::window;
 
 fn main() -> glib::ExitCode {
@@ -17,8 +17,6 @@ fn main() -> glib::ExitCode {
         window::create(app.clone());
         styles::load_css(css_file);
     });
-
-    let _ = image::invert_image();
 
     application.run()
 }

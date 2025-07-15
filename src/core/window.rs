@@ -17,13 +17,13 @@ pub fn create(app: Application) {
         .build();
 
     let container = Box::new(gtk::Orientation::Vertical, 10);
-    container.set_margin_top(300);
+    container.set_margin_top(200);
 
-    let img = image::open_image("assets/teapot.png").unwrap();
+    let img = image::open_image("assets/wha.jpg").unwrap();
     let texture = image::dynamic_image_to_texture(&img);
 
     let image = Image::from_paintable(Some(&texture.unwrap()));
-    image.set_size_request(200, 200);
+    image.set_size_request(0, 500);
     image.set_margin_top(50);
 
     let img_rc = Rc::new(RefCell::new(img));
