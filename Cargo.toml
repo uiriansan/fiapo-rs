@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-gtk4 = "0.10.0"
+glycin = "2.1.1"
+gtk4 = { version = "0.10.0", features = ["v4_6"] }
 image = "0.25.6"
