@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use ::image::DynamicImage;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Picture};
+use gtk::{Application, ApplicationWindow, Picture, ProgressBar};
 use gtk4 as gtk;
 use gtk4::glib::MainContext;
 
@@ -16,6 +16,7 @@ use pdf2image::{PDF, RenderOptionsBuilder};
 struct ReaderState {
     image_component: Picture,
     page_label: gtk::Label,
+    progress_bar: ProgressBar,
     pdf_file: PDF,
     pdf_file_path: String,
     page_count: usize,
@@ -29,6 +30,7 @@ impl ReaderState {
         pdf_file_path: &str,
         image_component: &Picture,
         page_label: &gtk::Label,
+        progress_bar: &ProgressBar,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let pdf_file = PDF::from_file(&pdf_file_path)
             .expect(format!("Could not open file `{pdf_file_path}`").as_str());
@@ -41,11 +43,13 @@ impl ReaderState {
         let texture = image::dynamic_image_to_texture(&page[0].clone());
         image_component.set_paintable(Some(&texture.unwrap()));
 
+        progress_bar.set_fraction(1.0 / page_count as f64);
         page_label.set_text(("1".to_string() + "/" + &page_count.to_string()).as_str());
 
         Ok(ReaderState {
             image_component: image_component.to_owned(),
             page_label: page_label.to_owned(),
+            progress_bar: progress_bar.to_owned(),
             pdf_file: pdf_file,
             pdf_file_path: pdf_file_path.to_owned(),
             page_count: page_count as usize,
@@ -82,7 +86,15 @@ impl ReaderState {
         let texture = image::dynamic_image_to_texture(&self.current_page_img);
         self.image_component.set_paintable(Some(&texture.unwrap()));
 
+        self.update_progress_bar();
         self.update_label();
+    }
+
+    fn update_progress_bar(&mut self) {
+        let current_page = 1.0 + self.current_page_index as f64;
+        let page_count = self.page_count as f64;
+
+        self.progress_bar.set_fraction(current_page / page_count);
     }
 
     fn update_label(&mut self) {
@@ -102,6 +114,16 @@ impl ReaderState {
     fn prev_page(&mut self) {
         let prev_index = (self.current_page_index + self.page_count - 1) % self.page_count;
         self.current_page_index = prev_index;
+        self.update_page();
+    }
+
+    fn first_page(&mut self) {
+        self.current_page_index = 0;
+        self.update_page();
+    }
+
+    fn last_page(&mut self) {
+        self.current_page_index = self.page_count - 1;
         self.update_page();
     }
 
@@ -153,8 +175,19 @@ fn render_pdf(window: &ApplicationWindow, file: gtk::gio::File) {
 
     let picture = Picture::new();
     let label = gtk::Label::new(Some(""));
+    let progress_bar = ProgressBar::builder()
+        .hexpand(true)
+        .show_text(false)
+        .sensitive(false)
+        .build();
     let reader_state = Rc::new(RefCell::new(
-        ReaderState::new(file.path().unwrap().to_str().unwrap(), &picture, &label).unwrap(),
+        ReaderState::new(
+            file.path().unwrap().to_str().unwrap(),
+            &picture,
+            &label,
+            &progress_bar,
+        )
+        .unwrap(),
     ));
 
     let btn_prev = icon_button::create(" < ");
@@ -224,6 +257,7 @@ fn render_pdf(window: &ApplicationWindow, file: gtk::gio::File) {
     header.set_end_widget(Some(&control_box));
     container.set_start_widget(Some(&header));
     container.set_center_widget(Some(&picture));
+    container.set_end_widget(Some(&progress_bar));
 
     window.set_child(Some(&container));
 
@@ -252,6 +286,14 @@ fn render_pdf(window: &ApplicationWindow, file: gtk::gio::File) {
                 }
                 container.set_margin_top(container_margin);
             }
+            gtk::gdk::Key::End => {
+                let reader_state = Rc::clone(&reader_state);
+                reader_state.borrow_mut().last_page();
+            }
+            gtk::gdk::Key::Home => {
+                let reader_state = Rc::clone(&reader_state);
+                reader_state.borrow_mut().first_page();
+            }
             _ => println!("{key}"),
         }
         gtk::glib::Propagation::Stop
@@ -266,6 +308,7 @@ pub fn create(app: Application) {
             .title("Fiapo")
             .default_width(800)
             .default_height(600)
+            .css_classes(["main-window"])
             .build(),
     );
 

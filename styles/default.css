@@ -1,5 +1,21 @@
 * {
-    all: unset;
     background-color: black;
     color: white;
+    padding: 0;
+    margin: 0;
+    border: none;
+    outline: none;
+}
+
+progressbar {
+    min-height: 5px;
+    padding: 5px 0 0 0;
+}
+progressbar trough {
+    min-height: 5px;
+}
+progressbar progress {
+    background-color: alpha(white, 0.5);
+    min-height: 5px;
+    border-radius: 5px;
 }

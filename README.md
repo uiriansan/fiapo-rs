@@ -15,11 +15,11 @@ cargo run --release
 - [ ] Built-in file/chapter manager;
 - [ ] Load files recursively;
 - [ ] Plug-in backend support;
-- [ ] MangaDex search;
+- [ ] MangaDex integration;
 - [ ] Fetch chapters from MangaDex;
-- [ ] AniList API support;
-- [ ] Download chapters from MangaDex;
+- [ ] AniList API integration;
 - [ ] Optimize
+- [ ] Download chapters from MangaDex;
 
 -- --
 This project was heavily inspired by [Kotatsu](https://kotatsu.app/).
