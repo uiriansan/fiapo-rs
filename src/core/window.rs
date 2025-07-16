@@ -175,12 +175,12 @@ fn pdf_test(window: &ApplicationWindow) {
         btn_next.connect_clicked(move |_| reader_state.borrow_mut().next_page());
     }
 
-    let mouse_controller = gtk::GestureClick::new();
-    container.add_controller(mouse_controller.clone());
-    mouse_controller.set_button(0);
+    let mouse_gesture_controller = gtk::GestureClick::new();
+    container.add_controller(mouse_gesture_controller.clone());
+    mouse_gesture_controller.set_button(0);
     {
         let reader_state = Rc::clone(&reader_state);
-        mouse_controller.connect_released(move |gesture, _, _, _| {
+        mouse_gesture_controller.connect_released(move |gesture, _, _, _| {
             if gesture.current_button() == 1 {
                 // left mouse button
                 reader_state.borrow_mut().prev_page();
@@ -188,6 +188,23 @@ fn pdf_test(window: &ApplicationWindow) {
                 // right mouse button
                 reader_state.borrow_mut().next_page();
             }
+        });
+    }
+
+    let scroll_mouse_controller =
+        gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::VERTICAL);
+    container.add_controller(scroll_mouse_controller.clone());
+    {
+        let reader_state = Rc::clone(&reader_state);
+        scroll_mouse_controller.connect_scroll(move |_, _, direction| {
+            if direction == 1.0 {
+                // scroll down
+                reader_state.borrow_mut().next_page();
+            } else if direction == -1.0 {
+                // scroll up
+                reader_state.borrow_mut().prev_page();
+            }
+            gtk::glib::Propagation::Stop
         });
     }
 

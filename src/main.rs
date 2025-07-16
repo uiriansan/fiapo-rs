@@ -8,7 +8,7 @@ use core::window;
 
 fn main() -> glib::ExitCode {
     let application = Application::builder()
-        .application_id("com.uiriansan.fiapo")
+        .application_id("github.uiriansan.fiapo")
         .build();
 
     let css_file = "styles/default.css";
