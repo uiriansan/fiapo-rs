@@ -12,7 +12,7 @@ cargo run --release
 ### TODO:
 - [X] Render PDF file with GTK;
 - [ ] Load PDF files;
-- [ ] built-in file/chapter manager;
+- [ ] Built-in file/chapter manager;
 - [ ] Load files recursively;
 - [ ] Plug-in backend support;
 - [ ] MangaDex search;
@@ -20,3 +20,6 @@ cargo run --release
 - [ ] AniList API support;
 - [ ] Download chapters from MangaDex;
 - [ ] Optimize
+
+-- --
+This project was heavily inspired by [Kotatsu](https://kotatsu.app/).
