@@ -147,7 +147,8 @@ fn show_home(window: Rc<ApplicationWindow>) {
 }
 
 fn render_pdf(window: &ApplicationWindow, file: gtk::gio::File) {
-    let container = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    let container = gtk::CenterBox::new();
+    container.set_orientation(gtk::Orientation::Vertical);
     container.set_margin_top(25);
 
     let picture = Picture::new();
@@ -210,31 +211,48 @@ fn render_pdf(window: &ApplicationWindow, file: gtk::gio::File) {
         });
     }
 
-    let label_center_box = gtk::CenterBox::new();
-    label_center_box.set_center_widget(Some(&label));
-
-    let center_box = gtk::CenterBox::new();
-    let row_container = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    row_container.append(&btn_prev);
-    row_container.append(&btn_invert);
-    row_container.append(&btn_next);
-    center_box.set_center_widget(Some(&row_container));
-    container.append(&label_center_box);
-    container.append(&center_box);
-    container.append(&picture);
+    let header = gtk::CenterBox::new();
+    header.set_orientation(gtk::Orientation::Horizontal);
+    header.set_margin_start(100);
+    header.set_margin_end(100);
+    header.set_margin_bottom(25);
+    header.set_start_widget(Some(&label));
+    let control_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    control_box.append(&btn_prev);
+    control_box.append(&btn_invert);
+    control_box.append(&btn_next);
+    header.set_end_widget(Some(&control_box));
+    container.set_start_widget(Some(&header));
+    container.set_center_widget(Some(&picture));
 
     window.set_child(Some(&container));
 
     let key_handler = gtk::EventControllerKey::new();
-    key_handler.connect_key_pressed(move |_, _, c, _| {
-        if c == 113 {
-            // left arrow
-            let reader_state = Rc::clone(&reader_state);
-            reader_state.borrow_mut().prev_page();
-        } else if c == 114 {
-            // right arrow
-            let reader_state = Rc::clone(&reader_state);
-            reader_state.borrow_mut().next_page();
+    key_handler.connect_key_pressed(move |_, key, _, _| {
+        match key {
+            gtk::gdk::Key::Left => {
+                let reader_state = Rc::clone(&reader_state);
+                reader_state.borrow_mut().prev_page();
+            }
+            gtk::gdk::Key::Right => {
+                let reader_state = Rc::clone(&reader_state);
+                reader_state.borrow_mut().next_page();
+            }
+            gtk::gdk::Key::i => {
+                let reader_state = Rc::clone(&reader_state);
+                reader_state.borrow_mut().toggle_invert_image_colors();
+            }
+            gtk::gdk::Key::f => {
+                header.set_visible(!header.get_visible());
+                let mut container_margin = container.margin_top();
+                if container_margin == 0 {
+                    container_margin = 25;
+                } else {
+                    container_margin = 0;
+                }
+                container.set_margin_top(container_margin);
+            }
+            _ => println!("{key}"),
         }
         gtk::glib::Propagation::Stop
     });
