@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::ops::Deref;
 use std::rc::Rc;
 
 use ::image::DynamicImage;
@@ -142,15 +141,7 @@ fn img_test(window: &ApplicationWindow) {
 
 fn pdf_test(window: &ApplicationWindow) -> Result<(), PDF2ImageError> {
     let container = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    // container.set_margin_top(200);
-
-    // let pdf_file =
-    //     PDF::from_file("/home/uirian/Downloads/Houseki no Kuni/HOUSEKI NO KUNI VOL.01.pdf")
-    //         .unwrap();
-    // let pages = pdf_file.render(
-    //     pdf2image::Pages::Range(1..=5),
-    //     RenderOptionsBuilder::default().pdftocairo(true).build()?,
-    // )?;
+    container.set_margin_top(25);
 
     let picture = Picture::new();
     let label = gtk::Label::new(Some(""));
@@ -183,24 +174,6 @@ fn pdf_test(window: &ApplicationWindow) -> Result<(), PDF2ImageError> {
         let reader_state = Rc::clone(&reader_state);
         btn_next.connect_clicked(move |_| reader_state.borrow_mut().next_page());
     }
-
-    // let img = pages[4].clone();
-    // let texture = image::dynamic_image_to_texture(&img);
-    // let image = Image::from_paintable(Some(&texture.unwrap()));
-    // image.set_size_request(0, 500);
-
-    // let img_rc = Rc::new(RefCell::new(img));
-    // let cloned_img = img_rc.clone();
-    // let cloned_gtk_img = image.clone();
-
-    // let button = icon_button::create("Click me!!!");
-    // button.connect_clicked(move |_| {
-    //     let mut img = cloned_img.borrow_mut();
-    //     img.invert();
-    //     let texture = image::dynamic_image_to_texture(&img);
-    //     cloned_gtk_img.set_paintable(Some(&texture.unwrap()));
-    // });
-    // button.set_cursor(gtk4::gdk::Cursor::from_name("pointer", None).as_ref());
 
     let label_center_box = gtk::CenterBox::new();
     label_center_box.set_center_widget(Some(&label));
