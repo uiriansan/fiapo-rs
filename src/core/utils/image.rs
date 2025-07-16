@@ -2,6 +2,7 @@ use gtk::{gdk, gdk_pixbuf, glib};
 use gtk4 as gtk;
 use image::{DynamicImage, ImageReader};
 
+#[allow(dead_code)]
 pub fn open_image(image: &str) -> Result<DynamicImage, Box<dyn std::error::Error>> {
     let img = ImageReader::open(image)?.decode()?;
     Ok(img)

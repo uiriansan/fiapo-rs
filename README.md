@@ -11,7 +11,7 @@ cargo run --release
 
 ### TODO:
 - [X] Render PDF file with GTK;
-- [ ] Load PDF files;
+- [X] Load PDF files;
 - [ ] Built-in file/chapter manager;
 - [ ] Load files recursively;
 - [ ] Plug-in backend support;

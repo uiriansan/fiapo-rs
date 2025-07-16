@@ -3,14 +3,16 @@ use std::rc::Rc;
 
 use ::image::DynamicImage;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Image, Picture};
+use gtk::{Application, ApplicationWindow, Picture};
 use gtk4 as gtk;
+use gtk4::glib::MainContext;
 
 use crate::core::components::icon_button;
 use crate::core::utils::image;
 
 use pdf2image::{PDF, RenderOptionsBuilder};
 
+#[allow(dead_code)]
 struct ReaderState {
     image_component: Picture,
     page_label: gtk::Label,
@@ -109,49 +111,48 @@ impl ReaderState {
     }
 }
 
-fn img_test(window: &ApplicationWindow) {
-    let container = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    container.set_margin_top(200);
+async fn open_file(window: &gtk::ApplicationWindow) {
+    let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
+    let file_filter = gtk::FileFilter::new();
+    file_filter.add_suffix("pdf");
+    // file_filter.add_suffix("png");
+    // file_filter.add_suffix("jpg");
 
-    let img = image::open_image("assets/wha.jpg").unwrap();
-    let texture = image::dynamic_image_to_texture(&img);
+    let file_dialog = gtk::FileDialog::builder()
+        .title("Open file or directory")
+        .accept_label("Open")
+        .modal(true)
+        .filters(&filters)
+        .build();
 
-    let image = Image::from_paintable(Some(&texture.unwrap()));
-    image.set_size_request(0, 500);
-    image.set_margin_top(50);
-
-    let img_rc = Rc::new(RefCell::new(img));
-    let cloned_img = img_rc.clone();
-    let cloned_gtk_img = image.clone();
-
-    let button = icon_button::create("Click me!!!");
-    button.connect_clicked(move |_| {
-        let mut img = cloned_img.borrow_mut();
-        img.invert();
-        let texture = image::dynamic_image_to_texture(&img);
-        cloned_gtk_img.set_paintable(Some(&texture.unwrap()));
-    });
-    button.set_cursor(gtk4::gdk::Cursor::from_name("pointer", None).as_ref());
-
-    container.append(&button);
-    container.append(&image);
-
-    window.set_child(Some(&container));
+    if let Ok(file) = file_dialog.open_future(Some(window)).await {
+        render_pdf(&window, file);
+    }
 }
 
-fn pdf_test(window: &ApplicationWindow) {
+fn show_home(window: Rc<ApplicationWindow>) {
+    let btn_open = icon_button::create("Open");
+    btn_open.set_cursor(gtk4::gdk::Cursor::from_name("pointer", None).as_ref());
+    {
+        let window = Rc::clone(&window);
+        btn_open.connect_clicked(move |_| {
+            let window = Rc::clone(&window);
+            MainContext::default().spawn_local(async move {
+                open_file(&window).await;
+            });
+        });
+    }
+    window.set_child(Some(&btn_open));
+}
+
+fn render_pdf(window: &ApplicationWindow, file: gtk::gio::File) {
     let container = gtk::Box::new(gtk::Orientation::Vertical, 10);
     container.set_margin_top(25);
 
     let picture = Picture::new();
     let label = gtk::Label::new(Some(""));
     let reader_state = Rc::new(RefCell::new(
-        ReaderState::new(
-            "/home/uirian/Downloads/Houseki no Kuni/HOUSEKI NO KUNI VOL.01.pdf",
-            &picture,
-            &label,
-        )
-        .unwrap(),
+        ReaderState::new(file.path().unwrap().to_str().unwrap(), &picture, &label).unwrap(),
     ));
 
     let btn_prev = icon_button::create(" < ");
@@ -240,15 +241,16 @@ fn pdf_test(window: &ApplicationWindow) {
 }
 
 pub fn create(app: Application) {
-    let window = ApplicationWindow::builder()
-        .application(&app)
-        .title("Fiapo")
-        .default_width(800)
-        .default_height(600)
-        .build();
+    let window = Rc::new(
+        ApplicationWindow::builder()
+            .application(&app)
+            .title("Fiapo")
+            .default_width(800)
+            .default_height(600)
+            .build(),
+    );
 
-    // img_test(&window);
-    pdf_test(&window);
+    show_home(Rc::clone(&window));
 
     window.present();
 }
