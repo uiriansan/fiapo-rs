@@ -8,3 +8,13 @@
 ```bash
 cargo run --release
 ```
+
+### TODO:
+- [X] Render PDF file with GTK;
+- [ ] Load PDF files;
+- [ ] Plug-in backend support;
+- [ ] MangaDex search;
+- [ ] Fetch chapters from MangaDex;
+- [ ] AniList API support;
+- [ ] Download chapters from MangaDex;
+- [ ] Optimize
