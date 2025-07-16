@@ -1,4 +1,4 @@
-use gtk::{gdk, gdk_pixbuf};
+use gtk::{gdk, gdk_pixbuf, glib};
 use gtk4 as gtk;
 use image::{DynamicImage, ImageReader};
 
@@ -8,12 +8,12 @@ pub fn open_image(image: &str) -> Result<DynamicImage, Box<dyn std::error::Error
 }
 
 // Convert a DynamicImage from the Image crate to Gdk.Pixbuf
-pub fn dynamic_image_to_pixbuf(img: &DynamicImage) -> Result<gdk_pixbuf::Pixbuf, gtk::glib::Error> {
+pub fn dynamic_image_to_pixbuf(img: &DynamicImage) -> Result<gdk_pixbuf::Pixbuf, glib::Error> {
     let rgba_img = img.to_rgba8();
     let (width, height) = rgba_img.dimensions();
     let bytes = rgba_img.into_raw();
     let pixbuf = gdk_pixbuf::Pixbuf::from_bytes(
-        &gtk::glib::Bytes::from(&bytes),
+        &glib::Bytes::from(&bytes),
         gdk_pixbuf::Colorspace::Rgb,
         true, // alpha
         8,    // bits per pixel
@@ -24,7 +24,8 @@ pub fn dynamic_image_to_pixbuf(img: &DynamicImage) -> Result<gdk_pixbuf::Pixbuf,
     Ok(pixbuf)
 }
 
-pub fn dynamic_image_to_texture(img: &DynamicImage) -> Result<gdk::Texture, gtk::glib::Error> {
+// Convert a DynamicImage from the Image crate to Gdk.Texture
+pub fn dynamic_image_to_texture(img: &DynamicImage) -> Result<gdk::Texture, glib::Error> {
     let pixbuf = dynamic_image_to_pixbuf(&img).unwrap();
     let texture = gdk::Texture::for_pixbuf(&pixbuf);
     Ok(texture)
