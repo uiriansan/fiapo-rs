@@ -9,7 +9,7 @@ use gtk4 as gtk;
 use crate::core::components::icon_button;
 use crate::core::utils::image;
 
-use pdf2image::{PDF, PDF2ImageError, RenderOptionsBuilder};
+use pdf2image::{PDF, RenderOptionsBuilder};
 
 struct ReaderState {
     image_component: Picture,
@@ -139,7 +139,7 @@ fn img_test(window: &ApplicationWindow) {
     window.set_child(Some(&container));
 }
 
-fn pdf_test(window: &ApplicationWindow) -> Result<(), PDF2ImageError> {
+fn pdf_test(window: &ApplicationWindow) {
     let container = gtk::Box::new(gtk::Orientation::Vertical, 10);
     container.set_margin_top(25);
 
@@ -189,7 +189,21 @@ fn pdf_test(window: &ApplicationWindow) -> Result<(), PDF2ImageError> {
     container.append(&picture);
 
     window.set_child(Some(&container));
-    Ok(())
+
+    let key_handler = gtk::EventControllerKey::new();
+    key_handler.connect_key_pressed(move |_, _, c, _| {
+        if c == 113 {
+            // left arrow
+            let reader_state = Rc::clone(&reader_state);
+            reader_state.borrow_mut().prev_page();
+        } else if c == 114 {
+            // right arrow
+            let reader_state = Rc::clone(&reader_state);
+            reader_state.borrow_mut().next_page();
+        }
+        gtk::glib::Propagation::Stop
+    });
+    window.add_controller(key_handler);
 }
 
 pub fn create(app: Application) {
@@ -201,6 +215,7 @@ pub fn create(app: Application) {
         .build();
 
     // img_test(&window);
-    let _ = pdf_test(&window);
+    pdf_test(&window);
+
     window.present();
 }
