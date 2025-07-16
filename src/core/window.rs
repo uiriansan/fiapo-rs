@@ -117,6 +117,7 @@ async fn open_file(window: &gtk::ApplicationWindow) {
     file_filter.add_suffix("pdf");
     // file_filter.add_suffix("png");
     // file_filter.add_suffix("jpg");
+    filters.append(&file_filter);
 
     let file_dialog = gtk::FileDialog::builder()
         .title("Open file or directory")
