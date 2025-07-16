@@ -175,6 +175,22 @@ fn pdf_test(window: &ApplicationWindow) {
         btn_next.connect_clicked(move |_| reader_state.borrow_mut().next_page());
     }
 
+    let mouse_controller = gtk::GestureClick::new();
+    container.add_controller(mouse_controller.clone());
+    mouse_controller.set_button(0);
+    {
+        let reader_state = Rc::clone(&reader_state);
+        mouse_controller.connect_released(move |gesture, _, _, _| {
+            if gesture.current_button() == 1 {
+                // left mouse button
+                reader_state.borrow_mut().prev_page();
+            } else if gesture.current_button() == 3 {
+                // right mouse button
+                reader_state.borrow_mut().next_page();
+            }
+        });
+    }
+
     let label_center_box = gtk::CenterBox::new();
     label_center_box.set_center_widget(Some(&label));
 
