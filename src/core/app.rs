@@ -1,67 +1,90 @@
-mod imp {
-    use gtk4::prelude::*;
-    use gtk4::subclass::prelude::*;
-    use gtk4::{Application, ApplicationWindow, glib};
+use gtk::{Application, ApplicationWindow, Stack};
+use gtk4::{self as gtk, prelude::GtkWindowExt};
+use pdf2image::{PDF, RenderOptionsBuilder};
+use std::{cell::RefCell, rc::Rc};
 
-    use crate::core::utils::styles;
+use crate::core::components::{
+    home::Home,
+    reader::{Reader, ReaderState},
+};
 
-    #[derive(Default)]
-    pub struct App {}
+pub struct AppContext {
+    window: ApplicationWindow,
+    view_stack: Stack,
+    reader_state: Option<ReaderState>,
+}
+impl AppContext {
+    pub fn new(app: &Application) -> Self {
+        let window = ApplicationWindow::builder()
+            .application(app)
+            .title("Fiapo")
+            .default_width(800)
+            .default_height(600)
+            .css_classes(["fiapo-window"])
+            .build();
+        let view_stack = Stack::new();
 
-    #[glib::object_subclass]
-    impl ObjectSubclass for App {
-        const NAME: &'static str = "MyApplication";
-        type Type = super::App;
-        type ParentType = Application;
-    }
+        window.present();
 
-    impl ObjectImpl for App {}
-
-    impl ApplicationImpl for App {
-        fn activate(&self) {
-            let application = self.obj();
-
-            const CSS_FILE: &str = "styles/default.css";
-            styles::load_css(CSS_FILE);
-
-            let window = ApplicationWindow::builder()
-                .application(&*application)
-                .title("My GTK4 App")
-                .default_width(350)
-                .default_height(250)
-                .build();
-
-            let button = gtk4::Button::with_label("Click me!");
-            button.connect_clicked(|_| {
-                println!("Button clicked!");
-            });
-
-            window.set_child(Some(&button));
-            window.present();
-        }
-
-        fn startup(&self) {
-            self.parent_startup();
-            println!("Application starting up...");
+        AppContext {
+            window: window,
+            view_stack,
+            reader_state: None,
         }
     }
 
-    impl GtkApplicationImpl for App {}
-}
+    pub fn setup(self) {
+        let context = Rc::new(RefCell::new(self));
+        let home = Home::new(&context);
+        // let reader = Reader::new(&self);
+        context
+            .borrow_mut()
+            .view_stack
+            .add_named(&home, Some("home"));
+        // self.view_stack.add_named(&reader, Some("reader"));
+        context.borrow_mut().go_home();
+    }
 
-use gtk4::{Application, glib};
+    pub fn get_window(&self) -> ApplicationWindow {
+        self.window.clone()
+    }
 
-glib::wrapper! {
-    pub struct App(ObjectSubclass<imp::App>)
-        @extends Application, gtk4::gio::Application,
-        @implements gtk4::gio::ActionGroup, gtk4::gio::ActionMap;
-}
+    pub fn go_home(&mut self) {
+        self.view_stack.set_visible_child_name("home");
+        self.window.set_child(Some(&self.view_stack));
+    }
 
-impl App {
-    pub fn new(application_id: &str, flags: gtk4::gio::ApplicationFlags) -> Self {
-        glib::Object::builder()
-            .property("application-id", application_id)
-            .property("flags", flags)
-            .build()
+    pub fn open_reader(
+        context: Rc<RefCell<Self>>,
+        source: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        println!("reading file...");
+
+        let pdf_file =
+            PDF::from_file(&source).expect(format!("Could not open file `{source}`").as_str());
+
+        let pages = pdf_file.render(
+            pdf2image::Pages::All,
+            RenderOptionsBuilder::default().pdftocairo(true).build()?,
+        )?;
+
+        println!("File read!");
+        let page_count = pdf_file.page_count();
+
+        context.borrow_mut().reader_state =
+            Some(ReaderState::new(source, pages, page_count as usize));
+        println!("ReaderState created!");
+
+        let reader = Reader::new(&context);
+        context
+            .borrow_mut()
+            .view_stack
+            .add_named(&reader, Some("reader"));
+        context
+            .borrow_mut()
+            .view_stack
+            .set_visible_child_name("reader");
+
+        Ok(())
     }
 }
