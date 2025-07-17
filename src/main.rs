@@ -1,11 +1,22 @@
 use gtk::prelude::*;
-use gtk::{gio, glib};
+use gtk::{Application, glib};
 use gtk4 as gtk;
 
 mod core;
-use core::app::App;
+use core::utils::styles;
+use core::window;
 
 fn main() -> glib::ExitCode {
-    let app = App::new("github.uiriansan.fiapo", gio::ApplicationFlags::empty());
-    app.run()
+    let application = Application::builder()
+        .application_id("github.uiriansan.fiapo")
+        .build();
+
+    let css_file = "styles/default.css";
+
+    application.connect_activate(|app| {
+        window::create(app.clone());
+        styles::load_css(css_file);
+    });
+
+    application.run()
 }
