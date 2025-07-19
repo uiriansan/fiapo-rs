@@ -64,7 +64,7 @@ impl AppContext {
             PDF::from_file(&source).expect(format!("Could not open file `{source}`").as_str());
 
         let pages = pdf_file.render(
-            pdf2image::Pages::All,
+            pdf2image::Pages::Range(1..=10),
             RenderOptionsBuilder::default().pdftocairo(true).build()?,
         )?;
 

@@ -2,7 +2,9 @@
 > I am a newbie Rust dev. This project is an attempt to learn the language.
 
 ### Dependencies:
-- [poppler](https://poppler.freedesktop.org/);
+- [`Gtk4 ≥ 4.10`](https://www.gtk.org/);
+- [`poppler`](https://poppler.freedesktop.org/);
+- [`sqlite3`](https://www.sqlite.org/)
 
 ### Build:
 ```bash
