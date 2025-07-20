@@ -12,7 +12,7 @@ cargo run --release
 ```
 
 ### TODO:
-- [ ] \(∞) Fight Rust's compiler in the Rc<RefCell> hell;
+- [ ] \(∞) Fight Rust's compiler in the `Rc<RefCell>` hell;
 - [X] Render PDF file with GTK;
 - [X] Load PDF files;
 - [X] Image library integration;
