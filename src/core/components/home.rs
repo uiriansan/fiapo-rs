@@ -35,24 +35,6 @@ glib::wrapper! {
         @implements gtk::Accessible, gtk::Actionable, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-async fn open_file_dialog(window: &gtk::ApplicationWindow) -> Result<gtk::gio::File, glib::Error> {
-    let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
-    let file_filter = gtk::FileFilter::new();
-    file_filter.add_suffix("pdf");
-    // file_filter.add_suffix("png");
-    // file_filter.add_suffix("jpg");
-    filters.append(&file_filter);
-
-    let file_dialog = gtk::FileDialog::builder()
-        .title("Open file or directory")
-        .accept_label("Open")
-        .modal(true)
-        .filters(&filters)
-        .build();
-
-    file_dialog.open_future(Some(window)).await
-}
-
 impl Home {
     pub fn new(app_context: &Rc<RefCell<AppContext>>) -> Self {
         let btn_open = icon_button::create("Open");
@@ -69,11 +51,28 @@ impl Home {
                             ctx.get_window()
                         };
 
-                        match open_file_dialog(&window).await {
-                            Ok(file) => {
-                                let path = file.path().unwrap().to_str().unwrap().to_string();
+                        match Self::open_file_dialog(&window).await {
+                            Ok(files) => {
+                                // files.iter::<gtk::gio::File>().for_each(|f| {
+                                //     println!(
+                                //         "{}",
+                                //         f.unwrap().path().unwrap().to_str().unwrap().to_string()
+                                //     );
+                                // });
 
-                                AppContext::open_reader(app_context.clone(), &path).unwrap();
+                                // let file: gtk::gio::File =
+                                //     files.iter::<gtk::gio::File>().next().unwrap().unwrap();
+                                // let t = file.path().unwrap();
+                                // let path = t.to_str().unwrap();
+
+                                let mut vec = Vec::new();
+                                files.iter::<gtk::gio::File>().for_each(|f| {
+                                    let path =
+                                        f.unwrap().path().unwrap().to_str().unwrap().to_string();
+                                    vec.push(path);
+                                });
+
+                                AppContext::open_reader(app_context.clone(), vec).unwrap();
                             }
                             Err(e) => println!("Could not open file: {}", e),
                         };
@@ -90,5 +89,25 @@ impl Home {
         home.set_vexpand(true);
         home.append(&btn_open);
         return home;
+    }
+
+    async fn open_file_dialog(
+        window: &gtk::ApplicationWindow,
+    ) -> Result<gtk::gio::ListModel, glib::Error> {
+        let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
+        let file_filter = gtk::FileFilter::new();
+        file_filter.add_suffix("pdf");
+        // file_filter.add_suffix("png");
+        // file_filter.add_suffix("jpg");
+        filters.append(&file_filter);
+
+        let file_dialog = gtk::FileDialog::builder()
+            .title("Open file or directory")
+            .accept_label("Open")
+            .modal(true)
+            .filters(&filters)
+            .build();
+
+        file_dialog.open_multiple_future(Some(window)).await
     }
 }

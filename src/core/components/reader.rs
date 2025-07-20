@@ -1,4 +1,11 @@
+use crate::core::app::AppContext;
+use gtk::Box;
+use gtk::prelude::*;
+use gtk::{Widget, glib};
+use gtk4 as gtk;
 use image::DynamicImage;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct ReaderState {
     source: String,
@@ -53,14 +60,6 @@ mod imp {
     impl WidgetImpl for Reader {}
 }
 
-use crate::core::app::AppContext;
-use gtk::Box;
-use gtk::prelude::*;
-use gtk::{Widget, glib};
-use gtk4 as gtk;
-use std::cell::RefCell;
-use std::rc::Rc;
-
 glib::wrapper! {
     pub struct Reader(ObjectSubclass<imp::Reader>)
         @extends Box, Widget,
@@ -68,14 +67,13 @@ glib::wrapper! {
 }
 
 impl Reader {
-    pub fn new(_app_context: &Rc<RefCell<AppContext>>) -> Self {
+    pub fn new(app_context: &Rc<RefCell<AppContext>>) -> Self {
         let reader: Reader = glib::Object::builder()
             .property("orientation", gtk::Orientation::Vertical)
             .property("spacing", 0)
             .build();
         reader.set_hexpand(true);
         reader.set_vexpand(true);
-        // reader.append(&btn_open);
         return reader;
     }
 }

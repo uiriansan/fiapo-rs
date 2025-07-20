@@ -4,7 +4,8 @@ use gtk4 as gtk;
 
 mod core;
 use core::app::AppContext;
-use core::utils::styles;
+
+use pdfium_render::prelude::*;
 
 const CSS_FILE: &str = "styles/default.css";
 
@@ -14,9 +15,9 @@ fn main() -> glib::ExitCode {
         .build();
 
     application.connect_activate(|app| {
-        styles::load_css(CSS_FILE);
         let app_context = AppContext::new(&app);
-        app_context.setup();
+        app_context.load_css(CSS_FILE);
+        app_context.setup_home();
     });
 
     application.run()
