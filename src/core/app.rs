@@ -1,114 +1,112 @@
-use gtk::{Application, ApplicationWindow, Stack};
-use gtk4::{self as gtk, prelude::GtkWindowExt};
-use pdf2image::{PDF, RenderOptionsBuilder};
-use std::{cell::RefCell, path::PathBuf, rc::Rc};
+use crate::core::components::home::Home;
+use crate::core::components::reader::Reader;
+use crate::core::server::Server;
+use crate::core::utils::config::{FiapoConfig, resolve_config_path};
+use gtk4 as gtk;
+use gtk4::prelude::GtkWindowExt;
+use gtk4::{Application, ApplicationWindow, Stack, gdk, gio};
+use log::{debug, error};
+use std::cell::RefCell;
+use std::rc::Rc;
 
-use crate::core::components::{
-    home::Home,
-    reader::{Reader, ReaderState},
-};
-use crate::core::server::server::Server;
-
-pub struct AppContext {
-    window: ApplicationWindow,
-    view_stack: Stack,
-    server: Server,
-    reader_state: Option<ReaderState>,
+#[derive(Debug, Default)]
+pub struct FiapoController {
+    pub config: FiapoConfig,
+    pub config_path: Option<String>,
+    pub window: ApplicationWindow,
+    pub view_stack: Stack,
+    pub server: Server,
+    // page_store: PageStore,
 }
-impl AppContext {
+
+impl FiapoController {
     pub fn new(app: &Application) -> Self {
+        let config = FiapoConfig::defaults();
+
         let window = ApplicationWindow::builder()
             .application(app)
             .title("Fiapo")
             .default_width(800)
             .default_height(600)
-            .css_classes(["fiapo-window"])
+            .css_name("fiapo-window")
             .decorated(false)
             .build();
         let view_stack = Stack::new();
-
-        window.present();
-
         let server = Server::new();
 
         Self {
+            config,
+            config_path: None,
             window,
             view_stack,
-            server,
-            reader_state: None,
+            server: server,
         }
     }
 
-    pub fn setup_home(self) {
-        let context = Rc::new(RefCell::new(self));
-        let home = Home::new(&context);
-        let reader = Reader::new(&context);
-        context
-            .borrow_mut()
-            .view_stack
-            .add_named(&home, Some("home"));
-        context.borrow_mut().go_home();
+    pub fn build_ui(controller: Rc<RefCell<FiapoController>>) {
+        let window = controller.borrow_mut().window.clone();
+        let stack = controller.borrow_mut().view_stack.clone();
+
+        {
+            let controller = Rc::clone(&controller);
+            let home = Home::new(controller);
+            let home_screen = home.build();
+
+            stack.add_named(&home_screen, Some("home_screen"));
+            stack.set_visible_child_name("home_screen");
+
+            window.set_child(Some(&stack));
+            window.present();
+        }
+
+        // debug!("{:?}", controller.borrow());
+        // debug!("");
     }
 
-    pub fn load_css(&self, file: &str) {
-        let display = gtk::gdk::Display::default().expect("Could not get default display!");
-        let provider = gtk::CssProvider::new();
-        provider.load_from_file(&gtk::gio::File::for_path(file));
-        gtk::style_context_add_provider_for_display(
-            &display,
-            &provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
+    pub fn go_home(&self) {
+        self.view_stack.set_visible_child_name("home_screen");
+    }
+    pub fn open_reader(controller: Rc<RefCell<FiapoController>>) {
+        if let Some(old_reader) = controller
+            .borrow()
+            .view_stack
+            .child_by_name("reader_screen")
+        {
+            controller.borrow().view_stack.remove(&old_reader);
+        }
+
+        let stack = controller.borrow_mut().view_stack.clone();
+        let reader = Reader::new(controller);
+        let reader_screen = reader.build();
+        stack.add_named(&reader_screen, Some("reader_screen"));
+        stack.set_visible_child_name("reader_screen");
     }
 
     pub fn get_window(&self) -> ApplicationWindow {
         self.window.clone()
     }
 
-    pub fn go_home(&mut self) {
-        self.view_stack.set_visible_child_name("home");
-        self.window.set_child(Some(&self.view_stack));
+    pub fn load_config(&mut self, path: &str) {
+        self.config_path = resolve_config_path(path);
+        if self.config_path.is_some() {
+            self.config
+                .parse_config_file(self.config_path.as_ref().unwrap());
+        }
     }
 
-    pub fn open_reader(
-        context: Rc<RefCell<Self>>,
-        sources: Vec<String>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Files!");
-        sources.iter().for_each(|f| {
-            println!("{}", f);
-        });
-
-        println!("reading file...");
-
-        let pdf_file = PDF::from_file(sources.first().unwrap())
-            .expect(format!("Could not open file `{}`", sources.first().unwrap()).as_str());
-
-        let pages = pdf_file.render(
-            pdf2image::Pages::Range(1..=10),
-            RenderOptionsBuilder::default().pdftocairo(true).build()?,
-        )?;
-
-        println!("File read!");
-        let page_count = pdf_file.page_count();
-
-        context.borrow_mut().reader_state = Some(ReaderState::new(
-            sources.first().unwrap(),
-            pages,
-            page_count as usize,
-        ));
-        println!("ReaderState created!");
-
-        let reader = Reader::new(&context);
-        context
-            .borrow_mut()
-            .view_stack
-            .add_named(&reader, Some("reader"));
-        context
-            .borrow_mut()
-            .view_stack
-            .set_visible_child_name("reader");
-
-        Ok(())
+    pub fn load_css(&self, file_path: &str) {
+        if let Some(display) = gdk::Display::default() {
+            let provider = gtk::CssProvider::new();
+            provider.load_from_file(&gio::File::for_path(file_path));
+            gtk::style_context_add_provider_for_display(
+                &display,
+                &provider,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
+        } else {
+            error!("Could not retrieve default `Gdk.Display`");
+        }
     }
 }
+
+// pub struct PageStore {}

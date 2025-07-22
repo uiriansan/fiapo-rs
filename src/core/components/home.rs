@@ -1,109 +1,98 @@
-mod imp {
-    use gtk::subclass::prelude::*;
-    use gtk::{Box, glib};
-    use gtk4 as gtk;
-
-    #[derive(Default)]
-    pub struct Home {}
-
-    #[glib::object_subclass]
-    impl ObjectSubclass for Home {
-        const NAME: &'static str = "FiapoHome";
-        type Type = super::Home;
-        type ParentType = Box;
-    }
-
-    impl ObjectImpl for Home {}
-    impl BoxImpl for Home {}
-    impl WidgetImpl for Home {}
-}
-
-use crate::core::app::AppContext;
-use crate::core::components::icon_button;
+use crate::core::app::FiapoController;
+use crate::core::server::{Source, SourceType};
+use glib::MainContext;
 use glib::clone;
-use gtk::Box;
-use gtk::prelude::*;
-use gtk::{Widget, glib};
+use gtk::prelude::{ButtonExt, FileExt, ListModelExtManual, WidgetExt};
+use gtk::{Button, CenterBox, gio, glib};
 use gtk4 as gtk;
-use gtk4::glib::MainContext;
+use log::{debug, warn};
 use std::cell::RefCell;
+use std::ffi::OsStr;
 use std::rc::Rc;
 
-glib::wrapper! {
-    pub struct Home(ObjectSubclass<imp::Home>)
-        @extends Box, Widget,
-        @implements gtk::Accessible, gtk::Actionable, gtk::Buildable, gtk::ConstraintTarget;
+#[derive(Debug, Default)]
+pub struct Home {
+    _controller: Rc<RefCell<FiapoController>>,
+    _container: CenterBox,
 }
-
 impl Home {
-    pub fn new(app_context: &Rc<RefCell<AppContext>>) -> Self {
-        let btn_open = icon_button::create("Open");
-        btn_open.set_cursor(gtk4::gdk::Cursor::from_name("pointer", None).as_ref());
-        btn_open.connect_clicked(clone!(
-            #[strong]
-            app_context,
+    pub fn new(controller: Rc<RefCell<FiapoController>>) -> Self {
+        let container = CenterBox::new();
+        Self {
+            _controller: controller,
+            _container: container,
+        }
+    }
+
+    pub fn build(&self) -> CenterBox {
+        let open_button = Button::with_label("Import files");
+        open_button.set_hexpand(true);
+        open_button.set_vexpand(true);
+        open_button.set_cursor(gtk::gdk::Cursor::from_name("pointer", None).as_ref());
+
+        open_button.connect_clicked(clone!(
+            #[strong(rename_to = controller)]
+            self._controller,
             move |_| {
                 MainContext::default().spawn_local({
-                    let app_context = Rc::clone(&app_context);
+                    let controller = Rc::clone(&controller);
                     async move {
                         let window = {
-                            let ctx = app_context.borrow();
-                            ctx.get_window()
+                            let ctrl = controller.borrow();
+                            ctrl.get_window()
                         };
 
-                        match Self::open_file_dialog(&window).await {
+                        match Home::open_file_dialog(&window).await {
                             Ok(files) => {
-                                // files.iter::<gtk::gio::File>().for_each(|f| {
-                                //     println!(
-                                //         "{}",
-                                //         f.unwrap().path().unwrap().to_str().unwrap().to_string()
-                                //     );
-                                // });
+                                let mut files_vec: Vec<Source> = Vec::new();
 
-                                // let file: gtk::gio::File =
-                                //     files.iter::<gtk::gio::File>().next().unwrap().unwrap();
-                                // let t = file.path().unwrap();
-                                // let path = t.to_str().unwrap();
+                                files.iter::<gio::File>().for_each(|file| {
+                                    let file = file.unwrap();
 
-                                let mut vec = Vec::new();
-                                files.iter::<gtk::gio::File>().for_each(|f| {
-                                    let path =
-                                        f.unwrap().path().unwrap().to_str().unwrap().to_string();
-                                    vec.push(path);
+                                    let path = file.path().unwrap();
+                                    let source_type: SourceType = match path.is_file() {
+                                        true => match path.extension().and_then(OsStr::to_str) {
+                                            Some("pdf") => SourceType::PDF,
+                                            Some("png") => SourceType::ImageSequence,
+                                            Some("jpg") => SourceType::ImageSequence,
+                                            _ => SourceType::PDF,
+                                        },
+                                        // Filter directories. We ignore them down the line.
+                                        _ => SourceType::Directory,
+                                    };
+
+                                    files_vec.push(Source::new(source_type, path));
                                 });
 
-                                AppContext::open_reader(app_context.clone(), vec).unwrap();
+                                controller.borrow_mut().server.set_sources(files_vec);
+                                debug!("{:?}", controller.borrow());
+                                FiapoController::open_reader(controller);
                             }
-                            Err(e) => println!("Could not open file: {}", e),
-                        };
+                            Err(e) => warn!("Could not open file: {}", e),
+                        }
                     }
                 });
             }
         ));
 
-        let home: Home = glib::Object::builder()
-            .property("orientation", gtk::Orientation::Vertical)
-            .property("spacing", 0)
-            .build();
-        home.set_hexpand(true);
-        home.set_vexpand(true);
-        home.append(&btn_open);
-        return home;
+        self._container.set_center_widget(Some(&open_button));
+
+        self._container.clone()
     }
 
     async fn open_file_dialog(
         window: &gtk::ApplicationWindow,
-    ) -> Result<gtk::gio::ListModel, glib::Error> {
-        let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
+    ) -> Result<gio::ListModel, glib::Error> {
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
         let file_filter = gtk::FileFilter::new();
-        file_filter.add_suffix("pdf");
-        // file_filter.add_suffix("png");
-        // file_filter.add_suffix("jpg");
+        file_filter.set_name(Some("Images and PDF files"));
+        file_filter.add_mime_type("image/*");
+        file_filter.add_mime_type("application/pdf");
         filters.append(&file_filter);
 
         let file_dialog = gtk::FileDialog::builder()
-            .title("Open file or directory")
-            .accept_label("Open")
+            .title("Select one or more files")
+            .accept_label("Import")
             .modal(true)
             .filters(&filters)
             .build();

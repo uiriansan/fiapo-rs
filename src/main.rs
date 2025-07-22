@@ -1,24 +1,42 @@
+use env_logger::Env;
 use gtk::prelude::*;
 use gtk::{Application, glib};
 use gtk4 as gtk;
+use std::cell::RefCell;
+use std::io::Write;
+use std::rc::Rc;
 
 mod core;
-use core::app::AppContext;
+use core::app::FiapoController;
 
-use pdfium_render::prelude::*;
-
+const APP_ID: &str = "github.uiriansan.fiapo";
+const CONFIG_FILE: &str = "~/.config/fiapo/fiapo.toml";
 const CSS_FILE: &str = "styles/default.css";
 
 fn main() -> glib::ExitCode {
-    let application = Application::builder()
-        .application_id("github.uiriansan.fiapo")
-        .build();
+    init_logger();
+
+    let application = Application::builder().application_id(APP_ID).build();
 
     application.connect_activate(|app| {
-        let app_context = AppContext::new(&app);
-        app_context.load_css(CSS_FILE);
-        app_context.setup_home();
+        let controller = Rc::new(RefCell::new(FiapoController::new(app)));
+        controller.borrow_mut().load_config(CONFIG_FILE);
+        controller.borrow().load_css(CSS_FILE);
+        FiapoController::build_ui(controller);
     });
-
     application.run()
+}
+
+fn init_logger() {
+    env_logger::Builder::from_env(Env::default().default_filter_or("debug"))
+        .format(|buf, record| {
+            let warn_style = buf.default_level_style(record.level());
+            writeln!(
+                buf,
+                "{warn_style}[{}]:{warn_style:#} {}",
+                record.level(),
+                record.args()
+            )
+        })
+        .init();
 }
