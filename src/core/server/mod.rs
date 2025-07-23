@@ -11,7 +11,7 @@ pub mod database;
 /// For example, a value of '2' means that the page store will hold up to 5 pages: previous 2, current and next 2.
 const EXTRA_PAGES_AT_ENDS: usize = 2;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Server {
     sources: Option<Vec<Source>>,
     source_count: usize,
@@ -21,6 +21,19 @@ pub struct Server {
     /// Holds a chunk of DynamicImages to be used by the reader.\
     /// A chunk is 5 pages by default (previous two, current and next two).
     page_store: VecDeque<DynamicImage>,
+    current_page_in_store: usize,
+}
+/// Custom debug implementation that ignores 'page_store' so it doesn't print a wall of bytes
+impl Debug for Server {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Server")
+            .field("sources", &self.sources)
+            .field("source_count", &self.source_count)
+            .field("current_source", &self.current_source)
+            .field("page_count", &self.page_count)
+            .field("current_page_in_store", &self.current_page_in_store)
+            .finish()
+    }
 }
 
 impl Server {
@@ -31,6 +44,7 @@ impl Server {
             current_source: 0,
             page_count: 0,
             page_store: VecDeque::with_capacity(EXTRA_PAGES_AT_ENDS * 2 + 1),
+            current_page_in_store: 0,
         }
     }
 
@@ -42,10 +56,34 @@ impl Server {
         self.page_count = page_count;
         self.page_store.clear();
 
-        self.get_chunk_for_page(0, 0);
+        // Render first chunk of pages
+        self.render_chunk_for_page(0, 0);
     }
 
+    // TODO: revise this
     pub fn get_prev_page(&mut self) -> Option<&DynamicImage> {
+        let current_page = self.current_page_in_store;
+
+        if current_page == 2 && self.page_store.len() == 3 {
+            self.current_page_in_store -= 1;
+        }
+
+        self.page_store.get(current_page)
+    }
+
+    // TODO: revise this
+    pub fn get_next_page(&mut self) -> Option<&DynamicImage> {
+        let current_page = self.current_page_in_store;
+
+        if current_page < 2 && self.page_store.len() > current_page + 1 {
+            self.current_page_in_store += 1;
+        }
+
+        self.page_store.get(current_page)
+    }
+
+    // TODO: revise this
+    fn render_prev_page(&mut self) {
         let mut prev_page_in_store = EXTRA_PAGES_AT_ENDS;
 
         if self.sources.is_some() {
@@ -57,12 +95,10 @@ impl Server {
                 let page = current_source.unwrap().render_prev_page();
             }
         }
-        None
     }
 
-    pub fn get_next_page(&mut self) -> Option<&DynamicImage> {
-        let mut next_page_in_store = EXTRA_PAGES_AT_ENDS;
-
+    // TODO: revise this
+    fn render_next_page(&mut self) {
         if self.sources.is_some() {
             let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
             if current_source.is_some() {
@@ -85,24 +121,48 @@ impl Server {
                             if page.is_some() {
                                 self.page_store.push_back(page.unwrap());
                             }
-                            // For now I am just assuming we won't get PDFs with pages < 1
+                            // We are not loading PDFs with pages < 1
                         }
-                    } else {
-                        // No more pages to render
-                        next_page_in_store += 1;
+                    }
+                    // else {
+                    //     // No more pages to render
+                    //     self.current_page_in_store += 1;
+                    // }
+                }
+            }
+        }
+    }
+
+    // TODO: revise this
+    fn render_chunk_for_page(&mut self, source: usize, page: usize) {
+        for i in 0..(EXTRA_PAGES_AT_ENDS + 1) {
+            let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
+            if current_source.is_some() {
+                // Pop the page at the start of the store:
+                self.page_store.pop_front();
+
+                let page = current_source.unwrap().render_next_page();
+                if page.is_some() {
+                    // push next page from the current source to the end of the store
+                    self.page_store.push_back(page.unwrap());
+                } else {
+                    // no pages left to render in the current source, so we try the next...
+                    if self.current_source < self.source_count {
+                        self.current_source += 1;
+
+                        let current_source =
+                            self.sources.as_mut().unwrap().get_mut(self.current_source);
+                        if current_source.is_some() {
+                            let page = current_source.unwrap().render_next_page();
+                            if page.is_some() {
+                                self.page_store.push_back(page.unwrap());
+                            }
+                            // We are not loading PDFs with pages < 1
+                        }
                     }
                 }
             }
-
-            // Get page at the middle of PageStore (current):
-            return self.page_store.get(next_page_in_store);
         }
-        None
-    }
-
-    pub fn get_chunk_for_page(&self, source: usize, page: usize) -> Option<Vec<DynamicImage>> {
-        for i in 0..(EXTRA_PAGES_AT_ENDS * 2 + 1) {}
-        None
     }
 }
 
