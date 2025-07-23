@@ -1,9 +1,10 @@
 use crate::core::app::FiapoController;
+use crate::core::server::Server;
 use glib::clone;
+use gtk::gdk::Key;
 use gtk::prelude::{ButtonExt, OrientableExt, WidgetExt};
 use gtk::{CenterBox, Picture, gdk, gdk_pixbuf, glib};
-use gtk4::gdk::{Key, ModifierType};
-use gtk4::{self as gtk, EventControllerKey};
+use gtk4 as gtk;
 use image::DynamicImage;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -19,6 +20,7 @@ impl Reader {
         let container = CenterBox::new();
         container.set_orientation(gtk::Orientation::Vertical);
         let picture = Picture::new();
+
         Self {
             controller,
             container,
@@ -26,12 +28,12 @@ impl Reader {
         }
     }
 
-    pub fn build(&mut self) -> CenterBox {
+    pub fn build(reader: Rc<RefCell<Self>>) -> CenterBox {
         let label = gtk::Label::new(Some("Reader"));
         let btn = gtk::Button::with_label("<- Back");
         btn.connect_clicked(clone!(
             #[strong(rename_to = controller)]
-            self.controller,
+            reader.borrow().controller,
             move |_| controller.borrow_mut().go_home()
         ));
 
@@ -40,29 +42,32 @@ impl Reader {
         container.set_start_widget(Some(&label));
         container.set_end_widget(Some(&btn));
 
-        self.next_page();
+        reader.borrow_mut().next_page();
 
-        self.container.set_start_widget(Some(&container));
-        self.container.set_center_widget(Some(&self.picture));
+        reader.borrow().container.set_start_widget(Some(&container));
+        reader
+            .borrow()
+            .container
+            .set_center_widget(Some(&reader.borrow().picture));
 
         let key_handler = gtk::EventControllerKey::new();
-        let window = self.controller.borrow().window.clone();
-        {
-            let mut s = Rc::new(&self);
-            key_handler.connect_key_pressed(move |_, key, _, _| s.handle_key_press(key));
-        }
+        let window = reader.borrow().controller.borrow().window.clone();
+
+        key_handler.connect_key_pressed(clone!(
+            #[strong]
+            reader,
+            move |_, key, _, _| {
+                match key {
+                    Key::Left => reader.borrow_mut().next_page(),
+                    Key::Right => reader.borrow_mut().prev_page(),
+                    _ => println!("{key}"),
+                }
+                gtk::glib::Propagation::Stop
+            }
+        ));
         window.add_controller(key_handler);
 
-        self.container.clone()
-    }
-
-    fn handle_key_press(&mut self, key: Key) -> gtk::glib::Propagation {
-        match key {
-            gtk::gdk::Key::Left => self.next_page(),
-            gtk::gdk::Key::Right => self.prev_page(),
-            _ => println!("{key}"),
-        }
-        gtk::glib::Propagation::Stop
+        reader.borrow().container.clone()
     }
 
     fn prev_page(&mut self) {

@@ -17,7 +17,6 @@ pub struct FiapoController {
     pub window: ApplicationWindow,
     pub view_stack: Stack,
     pub server: Server,
-    // page_store: PageStore,
 }
 
 impl FiapoController {
@@ -77,8 +76,8 @@ impl FiapoController {
         }
 
         let stack = controller.borrow_mut().view_stack.clone();
-        let mut reader = Reader::new(controller);
-        let reader_screen = reader.build();
+        let reader = Rc::new(RefCell::new(Reader::new(controller)));
+        let reader_screen = Reader::build(reader);
         stack.add_named(&reader_screen, Some("reader_screen"));
         stack.set_visible_child_name("reader_screen");
     }
@@ -110,5 +109,3 @@ impl FiapoController {
         }
     }
 }
-
-// pub struct PageStore {}
