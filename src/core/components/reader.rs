@@ -1,6 +1,6 @@
 use crate::core::app::FiapoController;
 use glib::clone;
-use gtk::prelude::{BoxExt, ButtonExt, OrientableExt};
+use gtk::prelude::{ButtonExt, OrientableExt};
 use gtk::{CenterBox, Picture, gdk, gdk_pixbuf, glib};
 use gtk4 as gtk;
 use image::DynamicImage;
@@ -39,11 +39,11 @@ impl Reader {
 
         match self._controller.borrow_mut().server.get_next_page() {
             Some(page) => {
-                if let Ok(texture) = self.dynamic_image_to_pixbuf(page) {
+                if let Ok(texture) = self.dynamic_image_to_texture(page) {
                     picture.set_paintable(Some(&texture));
                 }
             }
-            None => {}
+            _ => {}
         }
 
         self._container.set_start_widget(Some(&container));
@@ -69,5 +69,15 @@ impl Reader {
             (width * 4) as i32,
         );
         Ok(pixbuf)
+    }
+
+    // Convert a DynamicImage from the Image crate to Gdk.Texture
+    pub fn dynamic_image_to_texture(
+        &self,
+        img: &DynamicImage,
+    ) -> Result<gdk::Texture, glib::Error> {
+        let pixbuf = self.dynamic_image_to_pixbuf(&img).unwrap();
+        let texture = gdk::Texture::for_pixbuf(&pixbuf);
+        Ok(texture)
     }
 }

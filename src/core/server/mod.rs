@@ -31,6 +31,7 @@ impl Debug for Server {
             .field("source_count", &self.source_count)
             .field("current_source", &self.current_source)
             .field("page_count", &self.page_count)
+            .field("page_store", &self.page_store.len())
             .field("current_page_in_store", &self.current_page_in_store)
             .finish()
     }
@@ -78,6 +79,7 @@ impl Server {
             self.current_page_in_store += 1;
         }
 
+        println!("{}", current_page);
         self.page_store.get(current_page)
     }
 
@@ -137,9 +139,6 @@ impl Server {
         for i in 0..(EXTRA_PAGES_AT_ENDS + 1) {
             let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
             if current_source.is_some() {
-                // Pop the page at the start of the store:
-                self.page_store.pop_front();
-
                 let page = current_source.unwrap().render_next_page();
                 if page.is_some() {
                     // push next page from the current source to the end of the store
