@@ -27,4 +27,4 @@ cargo run --release
 - [ ] OCR support for in-app translation;
 
 -- --
-This project was heavily inspired by [Kotatsu](https://kotatsu.app/).
+This project is heavily inspired by [Kotatsu](https://kotatsu.app/).

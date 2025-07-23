@@ -1,8 +1,9 @@
 use crate::core::app::FiapoController;
 use glib::clone;
-use gtk::{CenterBox, glib};
+use gtk::prelude::{BoxExt, ButtonExt, OrientableExt};
+use gtk::{CenterBox, Picture, gdk, gdk_pixbuf, glib};
 use gtk4 as gtk;
-use gtk4::prelude::{BoxExt, ButtonExt};
+use image::DynamicImage;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -14,6 +15,7 @@ pub struct Reader {
 impl Reader {
     pub fn new(controller: Rc<RefCell<FiapoController>>) -> Self {
         let container = CenterBox::new();
+        container.set_orientation(gtk::Orientation::Vertical);
         Self {
             _controller: controller,
             _container: container,
@@ -29,12 +31,43 @@ impl Reader {
             move |_| controller.borrow_mut().go_home()
         ));
 
-        let container = gtk::Box::new(gtk::Orientation::Vertical, 10);
-        container.append(&label);
-        container.append(&btn);
+        let picture = Picture::new();
+        let container = CenterBox::new();
+        container.set_orientation(gtk::Orientation::Horizontal);
+        container.set_start_widget(Some(&label));
+        container.set_end_widget(Some(&btn));
 
-        self._container.set_center_widget(Some(&container));
+        match self._controller.borrow_mut().server.get_next_page() {
+            Some(page) => {
+                if let Ok(texture) = self.dynamic_image_to_pixbuf(page) {
+                    picture.set_paintable(Some(&texture));
+                }
+            }
+            None => {}
+        }
+
+        self._container.set_start_widget(Some(&container));
+        self._container.set_center_widget(Some(&picture));
 
         self._container.clone()
+    }
+
+    fn dynamic_image_to_pixbuf(
+        &self,
+        img: &DynamicImage,
+    ) -> Result<gdk_pixbuf::Pixbuf, glib::Error> {
+        let rgba_img = img.to_rgba8();
+        let (width, height) = rgba_img.dimensions();
+        let bytes = rgba_img.into_raw();
+        let pixbuf = gdk_pixbuf::Pixbuf::from_bytes(
+            &glib::Bytes::from(&bytes),
+            gdk_pixbuf::Colorspace::Rgb,
+            true, // alpha
+            8,    // bits per pixel
+            width as i32,
+            height as i32,
+            (width * 4) as i32,
+        );
+        Ok(pixbuf)
     }
 }
