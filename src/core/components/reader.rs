@@ -1,55 +1,90 @@
 use crate::core::app::FiapoController;
 use glib::clone;
-use gtk::prelude::{ButtonExt, OrientableExt};
+use gtk::prelude::{ButtonExt, OrientableExt, WidgetExt};
 use gtk::{CenterBox, Picture, gdk, gdk_pixbuf, glib};
-use gtk4 as gtk;
+use gtk4::gdk::{Key, ModifierType};
+use gtk4::{self as gtk, EventControllerKey};
 use image::DynamicImage;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Debug, Default)]
 pub struct Reader {
-    _controller: Rc<RefCell<FiapoController>>,
-    _container: CenterBox,
+    controller: Rc<RefCell<FiapoController>>,
+    container: CenterBox,
+    picture: Picture,
 }
 impl Reader {
     pub fn new(controller: Rc<RefCell<FiapoController>>) -> Self {
         let container = CenterBox::new();
         container.set_orientation(gtk::Orientation::Vertical);
+        let picture = Picture::new();
         Self {
-            _controller: controller,
-            _container: container,
+            controller,
+            container,
+            picture,
         }
     }
 
-    pub fn build(&self) -> CenterBox {
+    pub fn build(&mut self) -> CenterBox {
         let label = gtk::Label::new(Some("Reader"));
         let btn = gtk::Button::with_label("<- Back");
         btn.connect_clicked(clone!(
             #[strong(rename_to = controller)]
-            self._controller,
+            self.controller,
             move |_| controller.borrow_mut().go_home()
         ));
 
-        let picture = Picture::new();
         let container = CenterBox::new();
         container.set_orientation(gtk::Orientation::Horizontal);
         container.set_start_widget(Some(&label));
         container.set_end_widget(Some(&btn));
 
-        match self._controller.borrow_mut().server.get_next_page() {
+        self.next_page();
+
+        self.container.set_start_widget(Some(&container));
+        self.container.set_center_widget(Some(&self.picture));
+
+        let key_handler = gtk::EventControllerKey::new();
+        let window = self.controller.borrow().window.clone();
+        {
+            let mut s = Rc::new(&self);
+            key_handler.connect_key_pressed(move |_, key, _, _| s.handle_key_press(key));
+        }
+        window.add_controller(key_handler);
+
+        self.container.clone()
+    }
+
+    fn handle_key_press(&mut self, key: Key) -> gtk::glib::Propagation {
+        match key {
+            gtk::gdk::Key::Left => self.next_page(),
+            gtk::gdk::Key::Right => self.prev_page(),
+            _ => println!("{key}"),
+        }
+        gtk::glib::Propagation::Stop
+    }
+
+    fn prev_page(&mut self) {
+        match self.controller.borrow_mut().server.get_prev_page() {
             Some(page) => {
                 if let Ok(texture) = self.dynamic_image_to_texture(page) {
-                    picture.set_paintable(Some(&texture));
+                    self.picture.set_paintable(Some(&texture));
                 }
             }
             _ => {}
         }
+    }
 
-        self._container.set_start_widget(Some(&container));
-        self._container.set_center_widget(Some(&picture));
-
-        self._container.clone()
+    fn next_page(&mut self) {
+        match self.controller.borrow_mut().server.get_next_page() {
+            Some(page) => {
+                if let Ok(texture) = self.dynamic_image_to_texture(page) {
+                    self.picture.set_paintable(Some(&texture));
+                }
+            }
+            _ => {}
+        }
     }
 
     fn dynamic_image_to_pixbuf(

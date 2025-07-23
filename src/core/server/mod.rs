@@ -135,27 +135,31 @@ impl Server {
     }
 
     // TODO: revise this
+    // TODO: TEST: create and store the page store in the Reader and keep only a mutabe reference to it in the server... Or not, cause the state of the reader won't be saved, probably
     fn render_chunk_for_page(&mut self, source: usize, page: usize) {
-        for i in 0..(EXTRA_PAGES_AT_ENDS + 1) {
-            let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
-            if current_source.is_some() {
-                let page = current_source.unwrap().render_next_page();
-                if page.is_some() {
-                    // push next page from the current source to the end of the store
-                    self.page_store.push_back(page.unwrap());
-                } else {
-                    // no pages left to render in the current source, so we try the next...
-                    if self.current_source < self.source_count {
-                        self.current_source += 1;
+        // First chunk
+        if source == 0 && page == 0 {
+            for i in 0..(EXTRA_PAGES_AT_ENDS + 1) {
+                let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
+                if current_source.is_some() {
+                    let page = current_source.unwrap().render_next_page();
+                    if page.is_some() {
+                        // push next page from the current source to the end of the store
+                        self.page_store.push_back(page.unwrap());
+                    } else {
+                        // no pages left to render in the current source, so we try the next...
+                        if self.current_source < self.source_count {
+                            self.current_source += 1;
 
-                        let current_source =
-                            self.sources.as_mut().unwrap().get_mut(self.current_source);
-                        if current_source.is_some() {
-                            let page = current_source.unwrap().render_next_page();
-                            if page.is_some() {
-                                self.page_store.push_back(page.unwrap());
+                            let current_source =
+                                self.sources.as_mut().unwrap().get_mut(self.current_source);
+                            if current_source.is_some() {
+                                let page = current_source.unwrap().render_next_page();
+                                if page.is_some() {
+                                    self.page_store.push_back(page.unwrap());
+                                }
+                                // We are not loading PDFs with pages < 1
                             }
-                            // We are not loading PDFs with pages < 1
                         }
                     }
                 }

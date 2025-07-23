@@ -77,7 +77,7 @@ impl FiapoController {
         }
 
         let stack = controller.borrow_mut().view_stack.clone();
-        let reader = Reader::new(controller);
+        let mut reader = Reader::new(controller);
         let reader_screen = reader.build();
         stack.add_named(&reader_screen, Some("reader_screen"));
         stack.set_visible_child_name("reader_screen");
