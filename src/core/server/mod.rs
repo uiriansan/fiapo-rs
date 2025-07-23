@@ -49,7 +49,6 @@ impl Server {
     }
 
     pub fn set_sources(&mut self, sources: Vec<Source>, page_count: usize) {
-        // TODO: Sort sources by name A-z
         self.source_count = sources.len();
         self.sources = Some(sources);
         self.current_source = 0;
@@ -214,6 +213,22 @@ pub struct Source {
     current_page: usize,
     page_count: usize,
 }
+impl Ord for Source {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.path.file_name().cmp(&other.path.file_name())
+    }
+}
+impl PartialOrd for Source {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl PartialEq for Source {
+    fn eq(&self, other: &Self) -> bool {
+        self.path.file_name() == other.path.file_name()
+    }
+}
+impl Eq for Source {}
 impl Source {
     pub fn new(source_type: SourceType, path: PathBuf, keep_pdf_object: bool) -> Self {
         let mut pdf_object: Option<PDFWithDebug> = None;
@@ -246,27 +261,45 @@ impl Source {
         self.page_count
     }
 
-    fn render_current_page(&mut self) -> Result<Vec<DynamicImage>, PDF2ImageError> {
-        let pdf = self.pdf_object.as_mut().unwrap();
-        pdf.get_pdf().render(
-            pdf2image::Pages::Single(1 + self.current_page as u32),
-            RenderOptionsBuilder::default().build()?,
-        )
+    fn render_current_page(&mut self) -> Option<DynamicImage> {
+        if self.pdf_object.is_none() {
+            self.get_pdf_object();
+        }
+        match self.pdf_object.as_mut() {
+            Some(pdf) => {
+                match pdf.get_pdf().render(
+                    pdf2image::Pages::Single(1 + self.current_page as u32),
+                    RenderOptionsBuilder::default().build().ok()?,
+                ) {
+                    Ok(vec_img) => {
+                        if vec_img.len() > 0 {
+                            return Some(vec_img[0].to_owned());
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to render DynamicImage: {}", e);
+                    }
+                }
+            }
+            _ => {}
+        }
+        None
     }
 
     pub fn render_prev_page(&mut self) -> Option<DynamicImage> {
         if self.current_page > 0 {
             match self.render_current_page() {
-                Ok(page_vec) => {
-                    if page_vec.len() > 0 {
-                        self.current_page -= 1;
-                        return Some(page_vec[0].to_owned());
-                    }
+                Some(page) => {
+                    self.current_page -= 1;
+                    return Some(page);
                 }
-                Err(e) => {
-                    error!("Error rendering DynamicImage: {}", e);
+                None => {
+                    error!("Error rendering DynamicImage");
                 }
             }
+        } else {
+            // Free PDF object once it's not needed anymore
+            self.pdf_object = None;
         }
         None
     }
@@ -274,16 +307,17 @@ impl Source {
     pub fn render_next_page(&mut self) -> Option<DynamicImage> {
         if self.current_page + 1 < self.page_count {
             match self.render_current_page() {
-                Ok(page_vec) => {
-                    if page_vec.len() > 0 {
-                        self.current_page += 1;
-                        return Some(page_vec[0].to_owned());
-                    }
+                Some(page) => {
+                    self.current_page += 1;
+                    return Some(page);
                 }
-                Err(e) => {
-                    error!("Error rendering DynamicImage: {}", e);
+                None => {
+                    error!("Error rendering DynamicImage");
                 }
             }
+        } else {
+            // Free PDF object once it's not needed anymore
+            self.pdf_object = None;
         }
         None
     }

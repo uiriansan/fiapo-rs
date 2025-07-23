@@ -85,6 +85,8 @@ impl Home {
                                     files_vec.push(source);
                                 }
 
+                                files_vec.sort();
+
                                 controller
                                     .borrow_mut()
                                     .server
