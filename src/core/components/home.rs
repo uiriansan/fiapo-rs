@@ -42,29 +42,53 @@ impl Home {
                             ctrl.get_window()
                         };
 
+                        let mut total_page_count: usize = 0;
+
                         match Home::open_file_dialog(&window).await {
                             Ok(files) => {
                                 let mut files_vec: Vec<Source> = Vec::new();
 
-                                files.iter::<gio::File>().for_each(|file| {
+                                for (i, file) in files.iter::<gio::File>().enumerate() {
                                     let file = file.unwrap();
 
                                     let path = file.path().unwrap();
                                     let source_type: SourceType = match path.is_file() {
                                         true => match path.extension().and_then(OsStr::to_str) {
-                                            Some("pdf") => SourceType::PDF,
+                                            Some("pdf") => SourceType::Pdf,
                                             Some("png") => SourceType::ImageSequence,
                                             Some("jpg") => SourceType::ImageSequence,
-                                            _ => SourceType::PDF,
+                                            _ => SourceType::Pdf,
                                         },
-                                        // Filter directories. We ignore them down the line.
                                         _ => SourceType::Directory,
                                     };
 
-                                    files_vec.push(Source::new(source_type, path));
-                                });
+                                    let str_path = path.clone().to_str().unwrap().to_string();
 
-                                controller.borrow_mut().server.set_sources(files_vec);
+                                    // Ignore directories for now
+                                    if source_type == SourceType::Directory {
+                                        warn!("Skipping directory: {}", str_path);
+                                        continue;
+                                    }
+
+                                    let should_keep_pdf_object: bool = i == 0;
+                                    let source =
+                                        Source::new(source_type, path, should_keep_pdf_object);
+                                    let page_count = source.get_page_count();
+
+                                    // Ignore empty PDFs
+                                    if page_count <= 0 {
+                                        warn!("Skipping empty file: {}", str_path);
+                                        continue;
+                                    }
+
+                                    total_page_count += page_count;
+                                    files_vec.push(source);
+                                }
+
+                                controller
+                                    .borrow_mut()
+                                    .server
+                                    .set_sources(files_vec, total_page_count);
                                 debug!("{:?}", controller.borrow());
                                 FiapoController::open_reader(controller);
                             }

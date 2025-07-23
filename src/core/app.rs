@@ -2,17 +2,18 @@ use crate::core::components::home::Home;
 use crate::core::components::reader::Reader;
 use crate::core::server::Server;
 use crate::core::utils::config::{FiapoConfig, resolve_config_path};
+use gtk::prelude::GtkWindowExt;
+use gtk::{Application, ApplicationWindow, Stack, gdk, gio};
 use gtk4 as gtk;
-use gtk4::prelude::GtkWindowExt;
-use gtk4::{Application, ApplicationWindow, Stack, gdk, gio};
 use log::{debug, error};
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 #[derive(Debug, Default)]
 pub struct FiapoController {
     pub config: FiapoConfig,
-    pub config_path: Option<String>,
+    pub config_path: Option<PathBuf>,
     pub window: ApplicationWindow,
     pub view_stack: Stack,
     pub server: Server,
@@ -87,10 +88,11 @@ impl FiapoController {
     }
 
     pub fn load_config(&mut self, path: &str) {
-        self.config_path = resolve_config_path(path);
-        if self.config_path.is_some() {
-            self.config
-                .parse_config_file(self.config_path.as_ref().unwrap());
+        let resolve_path = resolve_config_path(path);
+        self.config_path = resolve_path.clone();
+        match resolve_path {
+            Some(config_path) => self.config.parse_config_file(config_path),
+            _ => {}
         }
     }
 
