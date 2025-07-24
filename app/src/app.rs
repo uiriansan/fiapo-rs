@@ -5,9 +5,10 @@ use crate::utils::config::{FiapoConfig, resolve_config_path};
 use gtk::prelude::GtkWindowExt;
 use gtk::{Application, ApplicationWindow, Stack, gdk, gio};
 use gtk4 as gtk;
-use log::{debug, error};
+use log::{error, info};
 use std::cell::RefCell;
-use std::path::{Path, PathBuf};
+use std::fs;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 #[derive(Debug, Default)]
@@ -97,15 +98,21 @@ impl FiapoController {
 
     pub fn load_css(&self, file_path: &str) {
         if let Some(display) = gdk::Display::default() {
-            let working_path = PathBuf::from(file!());
-            if let Some(working_dir) = working_path.parent() {
-                let provider = gtk::CssProvider::new();
-                provider.load_from_file(&gio::File::for_path(working_dir.join(file_path)));
-                gtk::style_context_add_provider_for_display(
-                    &display,
-                    &provider,
-                    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-                );
+            let entry_path = PathBuf::from(file!());
+            if let Some(srcdir) = entry_path.parent() {
+                if let Ok(working_dir) = fs::canonicalize(&srcdir) {
+                    let css_path = working_dir.join(file_path);
+                    let provider = gtk::CssProvider::new();
+                    provider.load_from_file(&gio::File::for_path(&css_path));
+                    gtk::style_context_add_provider_for_display(
+                        &display,
+                        &provider,
+                        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                    );
+                    info!("Loading styles from {}...", css_path.to_str().unwrap());
+                } else {
+                    error!("Failed to resolve path for styles");
+                }
             } else {
                 error!("Failed to resolve path for styles");
             }
