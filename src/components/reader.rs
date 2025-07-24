@@ -1,5 +1,4 @@
-use crate::core::app::FiapoController;
-use crate::core::server::Server;
+use crate::app::FiapoController;
 use glib::clone;
 use gtk::gdk::Key;
 use gtk::prelude::{ButtonExt, OrientableExt, WidgetExt};

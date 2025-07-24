@@ -1,7 +1,7 @@
-use crate::core::components::home::Home;
-use crate::core::components::reader::Reader;
-use crate::core::server::Server;
-use crate::core::utils::config::{FiapoConfig, resolve_config_path};
+use crate::components::home::Home;
+use crate::components::reader::Reader;
+use crate::server::Server;
+use crate::utils::config::{FiapoConfig, resolve_config_path};
 use gtk::prelude::GtkWindowExt;
 use gtk::{Application, ApplicationWindow, Stack, gdk, gio};
 use gtk4 as gtk;

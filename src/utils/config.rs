@@ -6,8 +6,6 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use toml;
 
-use crate::core::utils::config;
-
 #[derive(Deserialize, Debug, Default)]
 #[allow(dead_code)]
 pub struct FiapoConfig {

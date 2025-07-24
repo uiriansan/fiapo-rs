@@ -1,5 +1,5 @@
-use crate::core::app::FiapoController;
-use crate::core::server::{Source, SourceType};
+use crate::app::FiapoController;
+use crate::server::{Source, SourceType};
 use glib::MainContext;
 use glib::clone;
 use gtk::prelude::{ButtonExt, FileExt, ListModelExtManual, WidgetExt};

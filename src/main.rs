@@ -6,8 +6,11 @@ use std::cell::RefCell;
 use std::io::Write;
 use std::rc::Rc;
 
-mod core;
-use core::app::FiapoController;
+pub mod app;
+pub mod components;
+pub mod server;
+pub mod utils;
+use app::FiapoController;
 
 const APP_ID: &str = "github.uiriansan.fiapo";
 const CONFIG_FILE: &str = "~/.config/fiapo/fiapo.toml";
