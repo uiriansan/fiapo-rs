@@ -207,9 +207,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.30"
+version = "1.2.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deec109607ca693028562ed836a5f1c4b8bd77755c4e132fc5ce11b0b6211ae7"
+checksum = "5c1599538de2394445747c8cf7935946e3cc27e9625f889d979bfb2aaf569362"
 dependencies = [
  "jobserver",
  "libc",
@@ -253,10 +253,6 @@ name = "colorchoice"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
-
-[[package]]
-name = "core"
-version = "0.1.0"
 
 [[package]]
 name = "crc32fast"
@@ -465,7 +461,6 @@ dependencies = [
 name = "fiapo"
 version = "0.1.0"
 dependencies = [
- "core",
  "dotenv",
  "env_logger",
  "gtk4",
@@ -474,7 +469,6 @@ dependencies = [
  "pdf2image",
  "rusqlite",
  "serde",
- "server",
  "toml 0.9.2",
 ]
 
@@ -1551,13 +1545,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40734c41988f7306bb04f0ecf60ec0f3f1caa34290e4e8ea471dcd3346483b83"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "server"
-version = "0.1.0"
-dependencies = [
- "core",
 ]
 
 [[package]]

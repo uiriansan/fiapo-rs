@@ -7,7 +7,7 @@ use gtk::{Application, ApplicationWindow, Stack, gdk, gio};
 use gtk4 as gtk;
 use log::{debug, error};
 use std::cell::RefCell;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 #[derive(Debug, Default)]
@@ -97,13 +97,18 @@ impl FiapoController {
 
     pub fn load_css(&self, file_path: &str) {
         if let Some(display) = gdk::Display::default() {
-            let provider = gtk::CssProvider::new();
-            provider.load_from_file(&gio::File::for_path(file_path));
-            gtk::style_context_add_provider_for_display(
-                &display,
-                &provider,
-                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-            );
+            let working_path = PathBuf::from(file!());
+            if let Some(working_dir) = working_path.parent() {
+                let provider = gtk::CssProvider::new();
+                provider.load_from_file(&gio::File::for_path(working_dir.join(file_path)));
+                gtk::style_context_add_provider_for_display(
+                    &display,
+                    &provider,
+                    gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+                );
+            } else {
+                error!("Failed to resolve path for styles");
+            }
         } else {
             error!("Could not retrieve default `Gdk.Display`");
         }

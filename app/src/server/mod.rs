@@ -268,23 +268,20 @@ impl Source {
         if self.pdf_object.is_none() {
             self.get_pdf_object();
         }
-        match self.pdf_object.as_mut() {
-            Some(pdf) => {
-                match pdf.get_pdf().render(
-                    pdf2image::Pages::Single(1 + self.current_page as u32),
-                    RenderOptionsBuilder::default().build().ok()?,
-                ) {
-                    Ok(vec_img) => {
-                        if vec_img.len() > 0 {
-                            return Some(vec_img[0].to_owned());
-                        }
-                    }
-                    Err(e) => {
-                        error!("Failed to render DynamicImage: {}", e);
+        if let Some(pdf) = self.pdf_object.as_mut() {
+            match pdf.get_pdf().render(
+                pdf2image::Pages::Single(1 + self.current_page as u32),
+                RenderOptionsBuilder::default().build().ok()?,
+            ) {
+                Ok(vec_img) => {
+                    if !vec_img.is_empty() {
+                        return Some(vec_img[0].to_owned());
                     }
                 }
+                Err(e) => {
+                    error!("Failed to render DynamicImage: {}", e);
+                }
             }
-            _ => {}
         }
         None
     }

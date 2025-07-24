@@ -14,7 +14,7 @@ use app::FiapoController;
 
 const APP_ID: &str = "github.uiriansan.fiapo";
 const CONFIG_FILE: &str = "~/.config/fiapo/fiapo.toml";
-const CSS_FILE: &str = "styles/default.css";
+const CSS_FILE: &str = "../styles/default.css";
 
 fn main() -> glib::ExitCode {
     init_logger();
