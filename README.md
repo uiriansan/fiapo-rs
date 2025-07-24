@@ -1,5 +1,7 @@
 > [!WARNING]
 > I am a newbie (Rust) dev. This project is an attempt to learn the language.
+> Redesign count: `3`
+> Refactor count: `5`
 
 ### Dependencies:
 - [`Gtk4 ≥ 4.10`](https://www.gtk.org/);
