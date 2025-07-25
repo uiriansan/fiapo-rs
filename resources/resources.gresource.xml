@@ -1,0 +1,14 @@
+<!--
+    In order to bundle a single executable, we need to add
+    '.css' files and icons as gio::Resources and compile them.
+
+    Leaving this here for future reference.
+    https://gtk-rs.org/gtk4-rs/stable/latest/book/composite_templates.html#resources
+-->
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<gresources>
+  <gresource prefix="/github/uiriansan/fiapo/">
+    <file compressed="true" preprocess="xml-stripblanks">...</file>
+  </gresource>
+</gresources>

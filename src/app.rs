@@ -1,5 +1,5 @@
 use crate::core::config::{FiapoConfig, resolve_config_path};
-use crate::server::Server;
+use crate::core::reader::Server;
 use crate::ui::home::Home;
 use crate::ui::reader::Reader;
 use gtk::prelude::GtkWindowExt;
