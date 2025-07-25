@@ -85,8 +85,6 @@ impl Server {
 
     // TODO: revise this
     fn render_prev_page(&mut self) {
-        let mut prev_page_in_store = EXTRA_PAGES_AT_ENDS;
-
         if self.sources.is_some() {
             let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
             if current_source.is_some() {

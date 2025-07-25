@@ -1,7 +1,10 @@
 :root {
-    --foreground: white;
+    --text: "#FFFFFF";
+    --dim-text: alpha(var(--text), 0.5);
     --accent: #c8b8ad;
     --background: #161617;
     --active-background: rgba(255, 255, 255, 0.15);
     --placeholder_text_color: var(--foreground);
+
+    --default-padding: 10px;
 }

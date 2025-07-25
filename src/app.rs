@@ -1,7 +1,7 @@
-use crate::components::home::Home;
-use crate::components::reader::Reader;
+use crate::core::config::{FiapoConfig, resolve_config_path};
 use crate::server::Server;
-use crate::utils::config::{FiapoConfig, resolve_config_path};
+use crate::ui::home::Home;
+use crate::ui::reader::Reader;
 use gtk::prelude::GtkWindowExt;
 use gtk::{Application, ApplicationWindow, Stack, gdk, gio};
 use gtk4 as gtk;
@@ -100,6 +100,7 @@ impl FiapoController {
         if let Some(display) = gdk::Display::default() {
             let entry_path = PathBuf::from(file!());
             if let Some(srcdir) = entry_path.parent() {
+                // 'canonicalize' might be overkill, but...
                 if let Ok(working_dir) = fs::canonicalize(&srcdir) {
                     let css_path = working_dir.join(file_path);
                     let provider = gtk::CssProvider::new();

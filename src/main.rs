@@ -6,10 +6,10 @@ use std::cell::RefCell;
 use std::io::Write;
 use std::rc::Rc;
 
-pub mod app;
-pub mod components;
-pub mod server;
-pub mod utils;
+mod app;
+mod core;
+mod server;
+mod ui;
 use app::FiapoController;
 
 const APP_ID: &str = "github.uiriansan.fiapo";
@@ -31,6 +31,7 @@ fn main() -> glib::ExitCode {
 }
 
 fn init_logger() {
+    // TODO: Save to a file. Looks like 'env_logger' can't do it.
     env_logger::Builder::from_env(Env::default().default_filter_or("debug"))
         .format(|buf, record| {
             let warn_style = buf.default_level_style(record.level());
