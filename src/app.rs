@@ -27,8 +27,8 @@ impl FiapoController {
         let window = ApplicationWindow::builder()
             .application(app)
             .title("Fiapo")
-            .default_width(800)
-            .default_height(600)
+            .default_width(1280)
+            .default_height(720)
             .css_name("fiapo-window")
             .decorated(false)
             .build();

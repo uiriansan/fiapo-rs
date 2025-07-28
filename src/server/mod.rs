@@ -70,7 +70,12 @@ pub async fn search_manga(title: String) -> anyhow::Result<Vec<MangadexSearchDat
 
     for (_, manga) in manga_results.data.iter().enumerate() {
         let id = &manga.id;
-        let english_title = &manga.attributes.title[&Language::English];
+        let title_not_found = "English title unavailable.".to_string();
+        let english_title = &manga
+            .attributes
+            .title
+            .get(&Language::English)
+            .unwrap_or(&title_not_found);
         let mut romaji_title = "";
         for title in &manga.attributes.alt_titles {
             if let Some(j_title) = title.get(&Language::JapaneseRomanized) {

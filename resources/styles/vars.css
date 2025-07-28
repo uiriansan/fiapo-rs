@@ -1,10 +1,10 @@
 :root {
-    --text: "#FFFFFF";
+    --text: #ffffff;
     --dim-text: alpha(var(--text), 0.5);
-    --accent: #c8b8ad;
-    --background: #161617;
-    --active-background: rgba(255, 255, 255, 0.15);
-    --placeholder_text_color: var(--foreground);
+    --primary: #de7f7f;
+    --accent: #009999;
+    --background-dark: #111416;
+    --background-light: #222629;
 
     --default-padding: 10px;
 }

@@ -12,8 +12,6 @@ mod server;
 mod ui;
 use app::FiapoController;
 
-use server::get_r_manga;
-
 const APP_ID: &str = "github.uiriansan.fiapo";
 const CONFIG_FILE: &str = "~/.config/fiapo/fiapo.toml";
 const CSS_FILE: &str = "../resources/styles/main.css";

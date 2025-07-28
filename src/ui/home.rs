@@ -8,7 +8,7 @@ use gtk::gdk_pixbuf::Pixbuf;
 use gtk::prelude::{
     BoxExt, ButtonExt, EditableExt, FileExt, ListModelExtManual, OrientableExt, WidgetExt,
 };
-use gtk::{Button, CenterBox, Label, ListBox, SearchEntry, gdk, gio, glib};
+use gtk::{Button, FlowBox, Label, ListBox, SearchEntry, gdk, gio, glib};
 use gtk4 as gtk;
 use log::{debug, warn};
 use reqwest;
@@ -22,12 +22,12 @@ use std::thread;
 #[derive(Debug, Default)]
 pub struct Home {
     _controller: Rc<RefCell<FiapoController>>,
-    _container: CenterBox,
+    _container: gtk::Box,
     is_searching: Arc<AtomicBool>,
 }
 impl Home {
     pub fn new(controller: Rc<RefCell<FiapoController>>) -> Self {
-        let container = CenterBox::new();
+        let container = gtk::Box::new(gtk::Orientation::Vertical, 20);
         let is_searching = Arc::new(AtomicBool::new(false));
         Self {
             _controller: controller,
@@ -36,10 +36,9 @@ impl Home {
         }
     }
 
-    pub fn build(&self) -> CenterBox {
+    pub fn build(&self) -> gtk::Box {
         let open_button = Button::with_label("Import files");
-        open_button.set_hexpand(true);
-        open_button.set_vexpand(true);
+        open_button.set_hexpand(false);
         open_button.set_cursor(gtk::gdk::Cursor::from_name("pointer", None).as_ref());
 
         open_button.connect_clicked(clone!(
@@ -112,17 +111,28 @@ impl Home {
                 });
             }
         ));
+        let manga_search_bar = SearchEntry::new();
+        manga_search_bar.set_search_delay(500); // ms
+        manga_search_bar.set_hexpand(true);
+        manga_search_bar.set_placeholder_text(Some("Search for mangas..."));
+
+        let header_container = gtk::Box::new(gtk::Orientation::Horizontal, 20);
+        header_container.set_vexpand(false);
+        header_container.append(&manga_search_bar);
+        header_container.append(&open_button);
+        header_container.set_margin_top(20);
+        header_container.set_margin_end(20);
+        header_container.set_margin_start(20);
+
+        self._container.append(&header_container);
 
         let results_list = ListBox::new();
         let scroll = gtk::ScrolledWindow::new();
         scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
         scroll.set_child(Some(&results_list));
         scroll.set_vexpand(true);
-        self._container.set_center_widget(Some(&scroll));
 
-        let manga_search_bar = SearchEntry::new();
-        manga_search_bar.set_search_delay(500); // ms
-        manga_search_bar.set_placeholder_text(Some("Search for mangas..."));
+        self._container.append(&scroll);
 
         manga_search_bar.connect_search_changed(clone!(
             #[strong(rename_to = is_searching)]
@@ -161,11 +171,18 @@ impl Home {
                                         results_list.append(&no_results_label);
                                     } else {
                                         mangas.iter().for_each(|manga: &MangadexSearchData| {
-                                            let manga_container = CenterBox::new();
+                                            let manga_container =
+                                                gtk::Box::new(gtk::Orientation::Horizontal, 20);
                                             manga_container
                                                 .set_orientation(gtk::Orientation::Horizontal);
+
                                             let cover = gtk::Picture::new();
-                                            cover.set_size_request(100, 100);
+                                            cover.set_hexpand(false);
+                                            cover.set_vexpand(false);
+                                            cover.set_can_shrink(true);
+                                            cover.set_content_fit(gtk::ContentFit::Cover);
+                                            cover.set_css_classes(&["manga-cover"]);
+
                                             results_list.append(&manga_container);
 
                                             let cover_url = manga.cover_url.clone();
@@ -191,14 +208,23 @@ impl Home {
                                                 }
                                             });
 
-                                            manga_container.set_start_widget(Some(&cover));
+                                            cover.set_size_request(75, 100);
+                                            manga_container.append(&cover);
+                                            manga_container.set_margin_bottom(10);
                                             let manga_body_container =
                                                 gtk::Box::new(gtk::Orientation::Vertical, 10);
 
                                             let eng_title_label =
                                                 Label::new(Some(&manga.english_title.as_str()));
+                                            eng_title_label.set_valign(gtk::Align::Start);
+                                            eng_title_label.set_halign(gtk::Align::Start);
+                                            eng_title_label.add_css_class("manga-title-label");
                                             let romaji_title_label =
                                                 Label::new(Some(&manga.romaji_title.as_str()));
+                                            romaji_title_label.set_valign(gtk::Align::Start);
+                                            romaji_title_label.set_halign(gtk::Align::Start);
+                                            romaji_title_label
+                                                .add_css_class("manga-complement-label");
                                             let author_label = Label::new(Some(
                                                 format!(
                                                     "{}{}",
@@ -211,11 +237,14 @@ impl Home {
                                                 )
                                                 .as_str(),
                                             ));
+                                            author_label.set_halign(gtk::Align::Start);
+                                            author_label.set_valign(gtk::Align::Start);
+                                            author_label.add_css_class("manga-complement-label");
+
                                             manga_body_container.append(&eng_title_label);
                                             manga_body_container.append(&romaji_title_label);
                                             manga_body_container.append(&author_label);
-                                            manga_container
-                                                .set_center_widget(Some(&manga_body_container));
+                                            manga_container.append(&manga_body_container);
                                         });
                                     }
                                 }
@@ -235,17 +264,6 @@ impl Home {
                 }
             }
         ));
-
-        let header_container = CenterBox::new();
-        header_container.set_orientation(gtk::Orientation::Horizontal);
-        header_container.set_start_widget(Some(&manga_search_bar));
-        header_container.set_end_widget(Some(&open_button));
-        header_container.set_margin_top(20);
-        header_container.set_margin_end(50);
-        header_container.set_margin_start(50);
-
-        self._container.set_orientation(gtk::Orientation::Vertical);
-        self._container.set_start_widget(Some(&header_container));
 
         self._container.clone()
     }
@@ -283,6 +301,7 @@ impl Home {
 
         let img_stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(&img_data));
         let pixbuf = Pixbuf::from_stream(&img_stream, Some(&gio::Cancellable::new()))?;
+
         Ok(gdk::Texture::for_pixbuf(&pixbuf))
     }
 }

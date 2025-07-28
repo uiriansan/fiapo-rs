@@ -3,8 +3,12 @@
 @import url("./reader.css");
 @import url("./settings.css");
 
+fiapo-window {
+    background-color: var(--background-dark);
+}
+
 * {
-    background-color: black;
+    background: none;
     color: white;
     padding: 0;
     margin: 0;
@@ -23,4 +27,49 @@ progressbar progress {
     background-color: alpha(white, 0.5);
     min-height: 5px;
     border-radius: 5px;
+}
+
+scrolledwindow {
+    padding: 0px 20px 0px 20px;
+}
+scrolledwindow overshoot {
+    background: none;
+    background-color: transparent;
+    outline: none;
+    border: none;
+}
+scrolledwindow undershoot {
+    background: none;
+    background-color: transparent;
+    outline: none;
+    border: none;
+}
+
+entry {
+    padding: 5px 10px;
+    border-radius: 5px;
+    background-color: var(--background-light);
+    transition: 0.5s background-color;
+}
+entry selection {
+    background-color: var(--primary);
+    color: var(--background-dark);
+}
+
+button label {
+    padding: 5px 10px;
+    border-radius: 5px;
+    background-color: var(--background-light);
+    transition: 0.5s background-color;
+}
+button:hover label {
+    background-color: var(--primary);
+}
+
+.manga-title-label {
+    font-weight: bold;
+}
+.manga-complement-label {
+    font-size: 0.8em;
+    color: var(--dim-text);
 }
