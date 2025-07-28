@@ -12,11 +12,14 @@ mod server;
 mod ui;
 use app::FiapoController;
 
+use server::get_r_manga;
+
 const APP_ID: &str = "github.uiriansan.fiapo";
 const CONFIG_FILE: &str = "~/.config/fiapo/fiapo.toml";
 const CSS_FILE: &str = "../resources/styles/main.css";
 
-fn main() -> glib::ExitCode {
+#[tokio::main]
+async fn main() -> glib::ExitCode {
     init_logger();
 
     let application = Application::builder().application_id(APP_ID).build();

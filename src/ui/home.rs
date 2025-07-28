@@ -1,11 +1,16 @@
 use crate::app::FiapoController;
 use crate::core::reader::{Source, SourceType};
+use crate::server::{self, MangadexSearchData};
 use glib::MainContext;
 use glib::clone;
-use gtk::prelude::{ButtonExt, FileExt, ListModelExtManual, WidgetExt};
-use gtk::{Button, CenterBox, gio, glib};
+use gtk::gdk_pixbuf::Pixbuf;
+use gtk::prelude::{
+    BoxExt, ButtonExt, EditableExt, FileExt, ListModelExtManual, OrientableExt, WidgetExt,
+};
+use gtk::{Button, CenterBox, Label, ListBox, SearchEntry, gdk, gio, glib};
 use gtk4 as gtk;
 use log::{debug, warn};
+use reqwest;
 use std::cell::RefCell;
 use std::ffi::OsStr;
 use std::rc::Rc;
@@ -101,7 +106,100 @@ impl Home {
             }
         ));
 
-        self._container.set_center_widget(Some(&open_button));
+        let results_list = ListBox::new();
+        let scroll = gtk::ScrolledWindow::new();
+        scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
+        scroll.set_child(Some(&results_list));
+        scroll.set_vexpand(true);
+        self._container.set_center_widget(Some(&scroll));
+
+        let manga_search_bar = SearchEntry::new();
+        manga_search_bar.set_search_delay(500); // ms
+        manga_search_bar.set_placeholder_text(Some("Search for mangas..."));
+        manga_search_bar.connect_search_changed(move |entry| {
+            MainContext::default().spawn_local(clone!(
+                #[strong]
+                entry,
+                #[strong]
+                results_list,
+                async move {
+                    if !entry.text().is_empty() {
+                        println!("Searching...");
+                        if let Ok(mangas) = server::search_manga(entry.text().as_str()).await {
+                            results_list.remove_all();
+                            mangas.iter().for_each(|manga: &MangadexSearchData| {
+                                let manga_container = CenterBox::new();
+                                manga_container.set_orientation(gtk::Orientation::Horizontal);
+                                let cover = gtk::Picture::new();
+                                cover.set_size_request(100, 100);
+                                results_list.append(&manga_container);
+
+                                let cover_url = &manga.cover_url;
+                                glib::spawn_future_local(clone!(
+                                    #[strong]
+                                    cover_url,
+                                    #[strong]
+                                    cover,
+                                    async move {
+                                        if let Ok(texture) =
+                                            Home::texture_from_url(String::from(&cover_url)).await
+                                        {
+                                            glib::idle_add_local_once(clone!(
+                                                #[strong]
+                                                cover,
+                                                #[strong]
+                                                texture,
+                                                move || {
+                                                    cover.set_paintable(Some(&texture));
+                                                }
+                                            ));
+                                        } else {
+                                            eprintln!("Failed to load texture from {}", cover_url);
+                                        }
+                                    }
+                                ));
+
+                                manga_container.set_start_widget(Some(&cover));
+                                let manga_body_container =
+                                    gtk::Box::new(gtk::Orientation::Vertical, 10);
+
+                                let eng_title_label =
+                                    Label::new(Some(&manga.english_title.as_str()));
+                                let romaji_title_label =
+                                    Label::new(Some(&manga.romaji_title.as_str()));
+                                let author_label = Label::new(Some(
+                                    format!(
+                                        "{}{}",
+                                        &manga.author,
+                                        if &manga.artist != &manga.author {
+                                            format!(",{}", &manga.artist)
+                                        } else {
+                                            "".to_string()
+                                        }
+                                    )
+                                    .as_str(),
+                                ));
+                                manga_body_container.append(&eng_title_label);
+                                manga_body_container.append(&romaji_title_label);
+                                manga_body_container.append(&author_label);
+                                manga_container.set_center_widget(Some(&manga_body_container));
+                            });
+                        }
+                    }
+                }
+            ));
+        });
+
+        let header_container = CenterBox::new();
+        header_container.set_orientation(gtk::Orientation::Horizontal);
+        header_container.set_start_widget(Some(&manga_search_bar));
+        header_container.set_end_widget(Some(&open_button));
+        header_container.set_margin_top(20);
+        header_container.set_margin_end(50);
+        header_container.set_margin_start(50);
+
+        self._container.set_orientation(gtk::Orientation::Vertical);
+        self._container.set_start_widget(Some(&header_container));
 
         self._container.clone()
     }
@@ -124,5 +222,21 @@ impl Home {
             .build();
 
         file_dialog.open_multiple_future(Some(window)).await
+    }
+
+    async fn texture_from_url(url: String) -> Result<gdk::Texture, Box<dyn std::error::Error>> {
+        let client = reqwest::Client::builder()
+            .user_agent("github.uiriansan.fiapo")
+            .timeout(std::time::Duration::from_secs(5))
+            .build()?;
+        let result = client.get(url).send().await?;
+        if !result.status().is_success() {
+            return Err(format!("Image request failed: {}", result.status()).into());
+        }
+        let img_data = result.bytes().await?;
+
+        let img_stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(&img_data));
+        let pixbuf = Pixbuf::from_stream_future(&img_stream).await?;
+        Ok(gdk::Texture::for_pixbuf(&pixbuf))
     }
 }

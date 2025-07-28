@@ -7,6 +7,7 @@ use gtk4 as gtk;
 use image::DynamicImage;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::str::Bytes;
 
 #[derive(Debug, Default)]
 pub struct Reader {
