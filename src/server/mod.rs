@@ -45,7 +45,7 @@ impl MangadexSearchData {
     }
 }
 
-pub async fn search_manga(title: &str) -> anyhow::Result<Vec<MangadexSearchData>> {
+pub async fn search_manga(title: String) -> anyhow::Result<Vec<MangadexSearchData>> {
     // TODO: Handle errors and everything
     let search_future = async {
         let client = MangaDexClient::default();
