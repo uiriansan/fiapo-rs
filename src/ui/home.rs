@@ -9,7 +9,8 @@ use gtk::prelude::{
     BoxExt, ButtonExt, EditableExt, FileExt, ListModelExtManual, OrientableExt, WidgetExt,
 };
 use gtk::{Button, FlowBox, Label, ListBox, SearchEntry, gdk, gio, glib};
-use gtk4 as gtk;
+use gtk4::prelude::FrameExt;
+use gtk4::{self as gtk, Picture};
 use log::{debug, warn};
 use reqwest;
 use std::cell::RefCell;
@@ -129,8 +130,23 @@ impl Home {
         let results_list = ListBox::new();
         let scroll = gtk::ScrolledWindow::new();
         scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
-        scroll.set_child(Some(&results_list));
+        // scroll.set_child(Some(&results_list));
         scroll.set_vexpand(true);
+        scroll.set_hexpand(true);
+
+        let flow_box = FlowBox::builder()
+            .row_spacing(20)
+            .column_spacing(20)
+            .row_spacing(10)
+            .margin_top(10)
+            .margin_bottom(10)
+            .homogeneous(false)
+            .min_children_per_line(4)
+            .valign(gtk::Align::Start)
+            .halign(gtk::Align::Fill)
+            .selection_mode(gtk::SelectionMode::None)
+            .build();
+        scroll.set_child(Some(&flow_box));
 
         self._container.append(&scroll);
 
@@ -146,6 +162,7 @@ impl Home {
 
                 if !search_text.is_empty() {
                     results_list.remove_all();
+                    flow_box.remove_all();
                     is_searching.store(true, std::sync::atomic::Ordering::Relaxed);
 
                     let loading_label = Label::new(Some("Searching..."));
@@ -159,11 +176,14 @@ impl Home {
                         results_list,
                         #[strong]
                         is_searching,
+                        #[strong]
+                        flow_box,
                         async move {
                             println!("Searching for {}...", &search_text);
                             match server::search_manga(search_text).await {
                                 Ok(mangas) => {
                                     results_list.remove_all();
+                                    flow_box.remove_all();
 
                                     if mangas.is_empty() {
                                         let no_results_label = Label::new(Some("No results found"));
@@ -171,85 +191,15 @@ impl Home {
                                         results_list.append(&no_results_label);
                                     } else {
                                         mangas.iter().for_each(|manga: &MangadexSearchData| {
-                                            let manga_container =
-                                                gtk::Box::new(gtk::Orientation::Horizontal, 20);
-                                            manga_container
-                                                .set_orientation(gtk::Orientation::Horizontal);
-
-                                            let cover = gtk::Picture::new();
-                                            cover.set_hexpand(false);
-                                            cover.set_vexpand(false);
-                                            cover.set_can_shrink(true);
-                                            cover.set_content_fit(gtk::ContentFit::Cover);
-                                            cover.set_css_classes(&["manga-cover"]);
-
-                                            results_list.append(&manga_container);
-
-                                            let cover_url = manga.cover_url.clone();
-                                            let cover_clone = fragile::Fragile::new(cover.clone());
-                                            thread::spawn(move || {
-                                                let texture_result = Home::texture_from_url(
-                                                    String::from(&cover_url),
-                                                );
-
-                                                if let Ok(texture) = texture_result {
-                                                    glib::MainContext::default().invoke(
-                                                        move || {
-                                                            cover_clone
-                                                                .get()
-                                                                .set_paintable(Some(&texture));
-                                                        },
-                                                    );
-                                                } else {
-                                                    eprintln!(
-                                                        "Failed to load texture from {}",
-                                                        cover_url
-                                                    );
-                                                }
-                                            });
-
-                                            cover.set_size_request(75, 100);
-                                            manga_container.append(&cover);
-                                            manga_container.set_margin_bottom(10);
-                                            let manga_body_container =
-                                                gtk::Box::new(gtk::Orientation::Vertical, 10);
-
-                                            let eng_title_label =
-                                                Label::new(Some(&manga.english_title.as_str()));
-                                            eng_title_label.set_valign(gtk::Align::Start);
-                                            eng_title_label.set_halign(gtk::Align::Start);
-                                            eng_title_label.add_css_class("manga-title-label");
-                                            let romaji_title_label =
-                                                Label::new(Some(&manga.romaji_title.as_str()));
-                                            romaji_title_label.set_valign(gtk::Align::Start);
-                                            romaji_title_label.set_halign(gtk::Align::Start);
-                                            romaji_title_label
-                                                .add_css_class("manga-complement-label");
-                                            let author_label = Label::new(Some(
-                                                format!(
-                                                    "{}{}",
-                                                    &manga.author,
-                                                    if &manga.artist != &manga.author {
-                                                        format!(",{}", &manga.artist)
-                                                    } else {
-                                                        "".to_string()
-                                                    }
-                                                )
-                                                .as_str(),
-                                            ));
-                                            author_label.set_halign(gtk::Align::Start);
-                                            author_label.set_valign(gtk::Align::Start);
-                                            author_label.add_css_class("manga-complement-label");
-
-                                            manga_body_container.append(&eng_title_label);
-                                            manga_body_container.append(&romaji_title_label);
-                                            manga_body_container.append(&author_label);
-                                            manga_container.append(&manga_body_container);
+                                            let card =
+                                                Home::create_manga_card_for_search_results(manga);
+                                            flow_box.append(&card);
                                         });
                                     }
                                 }
                                 Err(e) => {
                                     results_list.remove_all();
+                                    flow_box.remove_all();
                                     let error_label =
                                         Label::new(Some(&format!("Search failed: {}", e)));
                                     error_label.set_margin_top(50);
@@ -261,6 +211,7 @@ impl Home {
                     ));
                 } else {
                     results_list.remove_all();
+                    flow_box.remove_all();
                 }
             }
         ));
@@ -288,6 +239,113 @@ impl Home {
         file_dialog.open_multiple_future(Some(window)).await
     }
 
+    fn create_manga_card_for_search_results(manga: &MangadexSearchData) -> gtk::Box {
+        let card_container = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(10)
+            .hexpand(false)
+            .vexpand(false)
+            .width_request(150)
+            .height_request(200)
+            .build();
+        card_container.add_css_class("search-manga-card");
+
+        let cover_frame = gtk::Frame::builder()
+            .hexpand(false)
+            .vexpand(false)
+            .width_request(130)
+            .height_request(185)
+            .valign(gtk::Align::Start)
+            .build();
+
+        let cover = Picture::builder()
+            .width_request(130)
+            .height_request(185)
+            .can_shrink(true)
+            .hexpand(false)
+            .vexpand(false)
+            .halign(gtk::Align::Center)
+            .valign(gtk::Align::Start)
+            .content_fit(gtk::ContentFit::Cover)
+            .build();
+        cover.add_css_class("manga-cover");
+
+        let cover_url = manga.cover_url.clone();
+        let cover_clone = fragile::Fragile::new(cover.clone());
+        thread::spawn(move || {
+            let texture_result = Home::texture_from_url(String::from(&cover_url));
+
+            if let Ok(texture) = texture_result {
+                glib::MainContext::default().invoke(move || {
+                    cover_clone.get().set_paintable(Some(&texture));
+                });
+            } else {
+                eprintln!("Failed to load texture from {}", cover_url);
+            }
+        });
+        cover.set_width_request(130);
+        cover.set_height_request(185);
+
+        let eng_title_label = Label::builder()
+            .label(manga.english_title.as_str())
+            .wrap(true)
+            .justify(gtk::Justification::Center)
+            .halign(gtk::Align::Center)
+            .valign(gtk::Align::End)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .lines(2)
+            .build();
+        eng_title_label.add_css_class("manga-title-label");
+
+        let romaji_title_label = Label::builder()
+            .label(manga.romaji_title.as_str())
+            .wrap(true)
+            .justify(gtk::Justification::Center)
+            .halign(gtk::Align::Center)
+            .valign(gtk::Align::End)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .lines(2)
+            .build();
+        romaji_title_label.add_css_class("manga-title-label");
+
+        let author_label = Label::new(Some(
+            format!(
+                "{}{}",
+                &manga.author,
+                if &manga.artist != &manga.author {
+                    format!(",{}", &manga.artist)
+                } else {
+                    "".to_string()
+                }
+            )
+            .as_str(),
+        ));
+        author_label.set_halign(gtk::Align::Start);
+        author_label.set_valign(gtk::Align::Start);
+        author_label.add_css_class("manga-complement-label");
+
+        cover_frame.set_child(Some(&cover));
+        card_container.append(&cover_frame);
+        if !manga.romaji_title.is_empty() {
+            romaji_title_label.set_wrap(true);
+            card_container.append(&romaji_title_label);
+        } else {
+            eng_title_label.set_wrap(true);
+            card_container.append(&eng_title_label);
+        }
+
+        let aspect_frame = gtk::AspectFrame::builder()
+            .ratio(150.0 / 200.0)
+            .obey_child(false)
+            .width_request(200)
+            .height_request(180)
+            .build();
+        aspect_frame.set_child(Some(&card_container));
+        let card = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        card.append(&aspect_frame);
+        card
+    }
+
     fn texture_from_url(url: String) -> Result<gdk::Texture, Box<dyn std::error::Error>> {
         let client = reqwest::blocking::Client::builder()
             .user_agent("github.uiriansan.fiapo")
@@ -300,7 +358,13 @@ impl Home {
         let img_data = result.bytes()?;
 
         let img_stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(&img_data));
-        let pixbuf = Pixbuf::from_stream(&img_stream, Some(&gio::Cancellable::new()))?;
+        let pixbuf = Pixbuf::from_stream_at_scale(
+            &img_stream,
+            130,
+            185,
+            true,
+            Some(&gio::Cancellable::new()),
+        )?;
 
         Ok(gdk::Texture::for_pixbuf(&pixbuf))
     }

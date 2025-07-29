@@ -66,6 +66,14 @@ button:hover label {
     background-color: var(--primary);
 }
 
+.search-manga-card {
+    background-color: var(--background-light);
+    padding: 10px;
+    border-radius: 10px;
+}
+.manga-cover {
+    border-radius: 10px;
+}
 .manga-title-label {
     font-weight: bold;
 }

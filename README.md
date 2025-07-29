@@ -19,6 +19,7 @@ cargo run --release
 - [X] Load PDF files;
 - [X] Image library integration;
 - [X] Load files recursively;
+- [ ] Load image sequences;
 - [X] MangaDex integration;
 - [ ] Fetch chapters from MangaDex;
 - [ ] Cache MangaDex data;
