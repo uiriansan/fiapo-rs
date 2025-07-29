@@ -264,21 +264,14 @@ impl Home {
     }
 
     fn create_manga_card_for_search_results(list_item: &glib::Object) {
-        let card_frame = gtk::AspectFrame::builder()
-            .ratio(180.0 / 200.0)
-            .obey_child(false)
-            .width_request(200)
-            .height_request(180)
-            .build();
         let card = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .spacing(10)
             .hexpand(false)
             .vexpand(false)
-            .width_request(180)
-            .height_request(200)
             .build();
         card.add_css_class("search-manga-card");
+        card.set_cursor(gtk::gdk::Cursor::from_name("pointer", None).as_ref());
         let cover_frame = gtk::Frame::builder()
             .hexpand(false)
             .vexpand(false)
@@ -311,12 +304,11 @@ impl Home {
         cover_frame.set_child(Some(&cover));
         card.append(&cover_frame);
         card.append(&title_label);
-        card_frame.set_child(Some(&card));
 
         let list_item = list_item
             .downcast_ref::<gtk::ListItem>()
             .expect("Could not downcast list_item");
-        list_item.set_child(Some(&card_frame));
+        list_item.set_child(Some(&card));
     }
 
     fn update_manga_card_for_search_results(list_item: &glib::Object) {
@@ -327,14 +319,10 @@ impl Home {
             .item()
             .and_downcast::<MangaSearchCardDataObject>()
             .expect("Could not downcast MangaSearchCardDataObject");
-        let card_frame = list_item
-            .child()
-            .and_downcast::<gtk::AspectFrame>()
-            .expect("Could not downcast gtk::AspectFrame");
-        let card = card_frame
+        let card = list_item
             .child()
             .and_downcast::<gtk::Box>()
-            .expect("Could not downcast gtk::Box");
+            .expect("Could not downcast gtk::AspectFrame");
         let cover_frame = card
             .first_child()
             .and_downcast::<gtk::Frame>()
