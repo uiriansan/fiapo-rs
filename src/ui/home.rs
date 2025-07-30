@@ -10,8 +10,8 @@ use gtk::prelude::{
     BoxExt, ButtonExt, EditableExt, FileExt, FrameExt, ListItemExt, ListModelExtManual, WidgetExt,
 };
 use gtk::{Button, FlowBox, Label, ListBox, SearchEntry, gdk, gio, glib};
+use gtk4 as gtk;
 use gtk4::glib::object::{Cast, CastNone};
-use gtk4::{self as gtk, Picture};
 use log::{debug, warn};
 use reqwest;
 use std::cell::RefCell;
@@ -23,8 +23,8 @@ use std::thread;
 
 #[derive(Debug, Default)]
 pub struct Home {
-    _controller: Rc<RefCell<FiapoController>>,
-    _container: gtk::Box,
+    controller: Rc<RefCell<FiapoController>>,
+    container: gtk::Box,
     is_searching: Arc<AtomicBool>,
 }
 impl Home {
@@ -32,8 +32,8 @@ impl Home {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 20);
         let is_searching = Arc::new(AtomicBool::new(false));
         Self {
-            _controller: controller,
-            _container: container,
+            controller: controller,
+            container: container,
             is_searching,
         }
     }
@@ -45,7 +45,7 @@ impl Home {
 
         open_button.connect_clicked(clone!(
             #[strong(rename_to = controller)]
-            self._controller,
+            self.controller,
             move |_| {
                 MainContext::default().spawn_local({
                     let controller = Rc::clone(&controller);
@@ -118,15 +118,15 @@ impl Home {
         manga_search_bar.set_hexpand(true);
         manga_search_bar.set_placeholder_text(Some("Search for mangas..."));
 
-        let header_container = gtk::Box::new(gtk::Orientation::Horizontal, 20);
-        header_container.set_vexpand(false);
-        header_container.append(&manga_search_bar);
-        header_container.append(&open_button);
-        header_container.set_margin_top(20);
-        header_container.set_margin_end(20);
-        header_container.set_margin_start(20);
+        let headercontainer = gtk::Box::new(gtk::Orientation::Horizontal, 20);
+        headercontainer.set_vexpand(false);
+        headercontainer.append(&manga_search_bar);
+        headercontainer.append(&open_button);
+        headercontainer.set_margin_top(20);
+        headercontainer.set_margin_end(20);
+        headercontainer.set_margin_start(20);
 
-        self._container.append(&header_container);
+        self.container.append(&headercontainer);
 
         let results_list = ListBox::new();
         let scroll = gtk::ScrolledWindow::new();
@@ -149,7 +149,7 @@ impl Home {
             .build();
         scroll.set_child(Some(&flow_box));
 
-        self._container.append(&scroll);
+        self.container.append(&scroll);
 
         manga_search_bar.connect_search_changed(clone!(
             #[strong(rename_to = is_searching)]
@@ -240,7 +240,7 @@ impl Home {
             }
         ));
 
-        self._container.clone()
+        self.container.clone()
     }
 
     async fn open_file_dialog(

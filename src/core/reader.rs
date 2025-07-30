@@ -1,6 +1,6 @@
 use image::DynamicImage;
 use log::error;
-use pdf2image::{PDF, PDF2ImageError, RenderOptionsBuilder};
+use pdf2image::RenderOptionsBuilder;
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -82,20 +82,20 @@ impl Server {
     }
 
     // TODO: revise this
-    fn render_prev_page(&mut self) {
+    fn _render_prev_page(&mut self) {
         if self.sources.is_some() {
             let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
             if current_source.is_some() {
                 // Pop the page at the end of the store:
                 self.page_store.pop_back();
 
-                let page = current_source.unwrap().render_prev_page();
+                let _page = current_source.unwrap()._render_prev_page();
             }
         }
     }
 
     // TODO: revise this
-    fn render_next_page(&mut self) {
+    fn _render_next_page(&mut self) {
         if self.sources.is_some() {
             let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
             if current_source.is_some() {
@@ -135,7 +135,7 @@ impl Server {
     fn render_chunk_for_page(&mut self, source: usize, page: usize) {
         // First chunk
         if source == 0 && page == 0 {
-            for i in 0..(EXTRA_PAGES_AT_ENDS + 1) {
+            for _i in 0..(EXTRA_PAGES_AT_ENDS + 1) {
                 let current_source = self.sources.as_mut().unwrap().get_mut(self.current_source);
                 if current_source.is_some() {
                     let page = current_source.unwrap().render_next_page();
@@ -199,7 +199,7 @@ impl Debug for PDFWithDebug {
 
 #[derive(Debug, Default)]
 pub struct Source {
-    source_type: SourceType,
+    _source_type: SourceType,
     /// Page of the source.\
     ///     source_type == PDF, then path to the PDF file;\
     ///     source_type == ImageSequence, then path to the parent dir;\
@@ -244,7 +244,7 @@ impl Source {
         }
 
         Self {
-            source_type,
+            _source_type: source_type,
             path,
             pdf_object,
             current_page: 0,
@@ -282,7 +282,7 @@ impl Source {
         None
     }
 
-    pub fn render_prev_page(&mut self) -> Option<DynamicImage> {
+    pub fn _render_prev_page(&mut self) -> Option<DynamicImage> {
         if self.current_page > 0 {
             match self.render_current_page() {
                 Some(page) => {

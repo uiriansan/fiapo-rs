@@ -4,7 +4,7 @@ use std::time::Duration;
 use tokio::time::timeout;
 use uuid::Uuid;
 
-pub async fn get_r_manga() -> anyhow::Result<()> {
+pub async fn _get_random_manga() -> anyhow::Result<()> {
     let client = MangaDexClient::default();
 
     let random_manga = client.manga().random().get().send().await?;
