@@ -1,25 +1,21 @@
 use crate::app::FiapoController;
 use crate::core::reader::{Source, SourceType};
-use crate::server::{self, MangadexSearchData};
-use fragile;
+use crate::server;
+use crate::ui::components::card::{Card, MangadexSearchDataObject};
 use glib::MainContext;
 use glib::clone;
-use glib::subclass::prelude::*;
-use gtk::gdk_pixbuf::Pixbuf;
 use gtk::prelude::{
-    BoxExt, ButtonExt, EditableExt, FileExt, FrameExt, ListItemExt, ListModelExtManual, WidgetExt,
+    BoxExt, ButtonExt, EditableExt, FileExt, ListItemExt, ListModelExtManual, WidgetExt,
 };
-use gtk::{Button, FlowBox, Label, ListBox, SearchEntry, gdk, gio, glib};
+use gtk::{Button, Label, SearchEntry, gio, glib};
 use gtk4 as gtk;
 use gtk4::glib::object::{Cast, CastNone};
 use log::{debug, warn};
-use reqwest;
 use std::cell::RefCell;
 use std::ffi::OsStr;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::thread;
 
 #[derive(Debug, Default)]
 pub struct Home {
@@ -128,26 +124,10 @@ impl Home {
 
         self.container.append(&headercontainer);
 
-        let results_list = ListBox::new();
         let scroll = gtk::ScrolledWindow::new();
-        scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
-        // scroll.set_child(Some(&results_list));
+        scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
         scroll.set_vexpand(true);
         scroll.set_hexpand(true);
-
-        let flow_box = FlowBox::builder()
-            .row_spacing(20)
-            .column_spacing(20)
-            .row_spacing(10)
-            .margin_top(10)
-            .margin_bottom(10)
-            .homogeneous(false)
-            .min_children_per_line(4)
-            .valign(gtk::Align::Start)
-            .halign(gtk::Align::Fill)
-            .selection_mode(gtk::SelectionMode::None)
-            .build();
-        scroll.set_child(Some(&flow_box));
 
         self.container.append(&scroll);
 
@@ -162,54 +142,43 @@ impl Home {
                 }
 
                 if !search_text.is_empty() {
-                    results_list.remove_all();
-                    flow_box.remove_all();
                     is_searching.store(true, std::sync::atomic::Ordering::Relaxed);
 
                     let loading_label = Label::new(Some("Searching..."));
                     loading_label.set_margin_top(50);
-                    results_list.append(&loading_label);
 
                     glib::MainContext::default().spawn_local(clone!(
                         #[strong]
                         search_text,
                         #[strong]
-                        results_list,
-                        #[strong]
                         is_searching,
-                        #[strong]
-                        flow_box,
                         #[strong]
                         scroll,
                         async move {
                             println!("Searching for {}...", &search_text);
                             match server::search_manga(search_text).await {
                                 Ok(mangas) => {
-                                    results_list.remove_all();
-                                    flow_box.remove_all();
-
                                     if mangas.is_empty() {
                                         let no_results_label = Label::new(Some("No results found"));
                                         no_results_label.set_margin_top(50);
-                                        results_list.append(&no_results_label);
                                     } else {
-                                        let manga_objects: Vec<MangaSearchCardDataObject> = mangas
+                                        let manga_objects: Vec<MangadexSearchDataObject> = mangas
                                             .into_iter()
-                                            .map(|manga| MangaSearchCardDataObject::new(manga))
+                                            .map(|manga| MangadexSearchDataObject::new(manga))
                                             .collect();
 
                                         let model =
-                                            gio::ListStore::new::<MangaSearchCardDataObject>();
+                                            gio::ListStore::new::<MangadexSearchDataObject>();
                                         for manga in manga_objects {
                                             model.append(&manga);
                                         }
 
                                         let factory = gtk::SignalListItemFactory::new();
                                         factory.connect_setup(move |_, list_item| {
-                                            Home::create_manga_card_for_search_results(list_item)
+                                            Home::create_cards_for_grid_view(list_item);
                                         });
                                         factory.connect_bind(move |_, list_item| {
-                                            Home::update_manga_card_for_search_results(list_item)
+                                            Home::update_grid_view_cards(list_item);
                                         });
 
                                         let grid_view = gtk::GridView::builder()
@@ -222,20 +191,15 @@ impl Home {
                                     }
                                 }
                                 Err(e) => {
-                                    results_list.remove_all();
-                                    flow_box.remove_all();
                                     let error_label =
                                         Label::new(Some(&format!("Search failed: {}", e)));
                                     error_label.set_margin_top(50);
-                                    results_list.append(&error_label);
                                 }
                             }
                             is_searching.store(false, std::sync::atomic::Ordering::Relaxed);
                         }
                     ));
                 } else {
-                    results_list.remove_all();
-                    flow_box.remove_all();
                 }
             }
         ));
@@ -263,151 +227,27 @@ impl Home {
         file_dialog.open_multiple_future(Some(window)).await
     }
 
-    fn create_manga_card_for_search_results(list_item: &glib::Object) {
-        let card = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(10)
-            .hexpand(false)
-            .vexpand(false)
-            .build();
-        card.add_css_class("search-manga-card");
-        card.set_cursor(gtk::gdk::Cursor::from_name("pointer", None).as_ref());
-        let cover_frame = gtk::Frame::builder()
-            .hexpand(false)
-            .vexpand(false)
-            .width_request(130)
-            .height_request(185)
-            .valign(gtk::Align::Start)
-            .build();
-        let cover = gtk::Picture::builder()
-            .width_request(130)
-            .height_request(185)
-            .can_shrink(true)
-            .hexpand(false)
-            .vexpand(false)
-            .halign(gtk::Align::Center)
-            .valign(gtk::Align::Start)
-            .content_fit(gtk::ContentFit::Cover)
-            .build();
-        cover.add_css_class("manga-cover");
-        let title_label = gtk::Label::builder()
-            .label("")
-            .wrap(true)
-            .justify(gtk::Justification::Center)
-            .halign(gtk::Align::Center)
-            .valign(gtk::Align::End)
-            .ellipsize(gtk::pango::EllipsizeMode::End)
-            .lines(2)
-            .build();
-        title_label.add_css_class("manga-title-label");
-
-        cover_frame.set_child(Some(&cover));
-        card.append(&cover_frame);
-        card.append(&title_label);
-
+    fn create_cards_for_grid_view(list_item: &glib::Object) {
         let list_item = list_item
             .downcast_ref::<gtk::ListItem>()
-            .expect("Could not downcast list_item");
+            .expect("Could not downgcast ListItem");
+        let card = Card::new();
         list_item.set_child(Some(&card));
     }
 
-    fn update_manga_card_for_search_results(list_item: &glib::Object) {
+    fn update_grid_view_cards(list_item: &glib::Object) {
         let list_item = list_item
             .downcast_ref::<gtk::ListItem>()
-            .expect("Could not downcast list_item");
-        let manga_obj = list_item
+            .expect("Could not downcast ListItem");
+        let card_object = list_item
             .item()
-            .and_downcast::<MangaSearchCardDataObject>()
-            .expect("Could not downcast MangaSearchCardDataObject");
+            .and_downcast::<MangadexSearchDataObject>()
+            .expect("Could not downcast MangadexSearchDataObject");
+        let card_data = card_object.data();
         let card = list_item
             .child()
-            .and_downcast::<gtk::Box>()
-            .expect("Could not downcast gtk::AspectFrame");
-        let cover_frame = card
-            .first_child()
-            .and_downcast::<gtk::Frame>()
-            .expect("Could not downcast gtk::Frame");
-        let cover = cover_frame
-            .child()
-            .and_downcast::<gtk::Picture>()
-            .expect("Could not downcast gtk::Picture");
-        let title_label = card
-            .last_child()
-            .and_downcast::<gtk::Label>()
-            .expect("Could not downcast gtk::Label");
-
-        let manga_data = manga_obj.data();
-        title_label.set_text(if !manga_data.romaji_title.is_empty() {
-            &manga_data.romaji_title
-        } else {
-            &manga_data.english_title
-        });
-
-        let cover_url = manga_data.cover_url;
-        let cover_clone = fragile::Fragile::new(cover.clone());
-        thread::spawn(move || {
-            let texture_result = Home::texture_from_url(String::from(&cover_url));
-
-            if let Ok(texture) = texture_result {
-                glib::MainContext::default().invoke(move || {
-                    cover_clone.get().set_paintable(Some(&texture));
-                });
-            } else {
-                eprintln!("Failed to load texture from {}", cover_url);
-            }
-        });
-    }
-
-    fn texture_from_url(url: String) -> Result<gdk::Texture, Box<dyn std::error::Error>> {
-        let client = reqwest::blocking::Client::builder()
-            .user_agent("github.uiriansan.fiapo")
-            .timeout(std::time::Duration::from_secs(5))
-            .build()?;
-        let result = client.get(url).send()?;
-        if !result.status().is_success() {
-            return Err(format!("Image request failed: {}", result.status()).into());
-        }
-        let img_data = result.bytes()?;
-
-        let img_stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(&img_data));
-        let pixbuf = Pixbuf::from_stream_at_scale(
-            &img_stream,
-            130,
-            185,
-            true,
-            Some(&gio::Cancellable::new()),
-        )?;
-
-        Ok(gdk::Texture::for_pixbuf(&pixbuf))
-    }
-}
-
-mod imp {
-    use super::*;
-
-    #[derive(Debug, Default)]
-    pub struct MangaSearchCardDataObject {
-        pub data: RefCell<Option<MangadexSearchData>>,
-    }
-    #[glib::object_subclass]
-    impl ObjectSubclass for MangaSearchCardDataObject {
-        const NAME: &'static str = "SomeStructObject";
-        type Type = super::MangaSearchCardDataObject;
-    }
-
-    impl ObjectImpl for MangaSearchCardDataObject {}
-}
-
-glib::wrapper! {
-    pub struct MangaSearchCardDataObject(ObjectSubclass<imp::MangaSearchCardDataObject>);
-}
-impl MangaSearchCardDataObject {
-    pub fn new(data: MangadexSearchData) -> Self {
-        let obj: Self = glib::Object::builder().build();
-        obj.imp().data.replace(Some(data));
-        obj
-    }
-    pub fn data(&self) -> MangadexSearchData {
-        self.imp().data.borrow().as_ref().unwrap().clone()
+            .and_downcast::<Card>()
+            .expect("Could not downcast Card");
+        card.update(card_data);
     }
 }

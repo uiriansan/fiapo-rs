@@ -33,6 +33,9 @@ impl FiapoController {
             .decorated(false)
             .build();
         let view_stack = Stack::new();
+        view_stack.set_transition_type(gtk::StackTransitionType::Crossfade);
+        view_stack.set_transition_duration(250);
+        view_stack.set_interpolate_size(true);
         let server = Server::new();
 
         Self {

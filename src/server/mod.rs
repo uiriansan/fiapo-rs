@@ -16,7 +16,7 @@ pub async fn _get_random_manga() -> anyhow::Result<()> {
 
 use mangadex_api_types_rust::{Language, MangaSortOrder, OrderDirection};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MangadexSearchData {
     pub id: Uuid,
     pub english_title: String,

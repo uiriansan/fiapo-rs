@@ -9,7 +9,7 @@ fiapo-window {
 
 * {
     background: none;
-    color: white;
+    color: var(--text);
     padding: 0;
     margin: 0;
     border: none;
@@ -24,13 +24,14 @@ progressbar trough {
     min-height: 5px;
 }
 progressbar progress {
-    background-color: alpha(white, 0.5);
+    background-color: alpha(var(--text), 0.5);
     min-height: 5px;
     border-radius: 5px;
 }
 
 scrolledwindow {
-    padding: 0px 20px 0px 20px;
+    padding: 0px;
+    margin-bottom: 20px;
 }
 scrolledwindow overshoot {
     background: none;
@@ -64,4 +65,20 @@ button label {
 }
 button:hover label {
     background-color: var(--primary);
+}
+
+scrollbar trough {
+    background-color: transparent;
+    min-width: 5px;
+}
+scrollbar slider {
+    background-color: var(--background-light);
+    min-width: 5px;
+    border-radius: 5px;
+}
+
+tooltip {
+    padding: 10px;
+    background-color: var(--background-dark);
+    border: 0.5px solid var(--text);
 }

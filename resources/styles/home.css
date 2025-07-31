@@ -1,4 +1,4 @@
-.search-manga-card {
+.manga-card {
     padding: 10px;
     margin: 20px;
     background-color: var(--background-dark);
@@ -8,17 +8,17 @@
         0.5s background-color,
         0.5s border-color;
 }
-.search-manga-card:hover {
+.manga-card:hover {
     background-color: var(--background-light);
     border-color: var(--primary);
 }
-.manga-cover {
+.manga-card-cover {
     border-radius: 10px;
 }
-.manga-title-label {
+.manga-card-title {
     font-weight: bold;
 }
-.manga-complement-label {
+.manga-card-author {
     font-size: 0.8em;
     color: var(--dim-text);
 }
