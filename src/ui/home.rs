@@ -184,8 +184,9 @@ impl Home {
                                         let grid_view = gtk::GridView::builder()
                                             .model(&gtk::NoSelection::new(Some(model)))
                                             .factory(&factory)
-                                            .min_columns(1)
+                                            .min_columns(3)
                                             .build();
+                                        grid_view.add_css_class("search-grid-view");
 
                                         scroll.set_child(Some(&grid_view));
                                     }

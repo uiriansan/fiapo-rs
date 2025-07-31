@@ -6,6 +6,7 @@ use gtk::subclass::{box_::BoxImpl, widget::WidgetImpl};
 use gtk::{gdk, gdk_pixbuf, gio, glib};
 use gtk4 as gtk;
 use std::cell::{OnceCell, RefCell};
+use std::rc::Rc;
 use std::thread;
 
 use crate::server::MangadexSearchData;
@@ -155,14 +156,49 @@ impl Card {
 
         self.set_tooltip_text(Some(&manga_title));
 
-        let click_controller = gtk::GestureClick::new();
-        click_controller.connect_pressed(move |_gesture, _press_c, _x, _y| {
-            println!(
-                "{:0>3}:\n    {}\n    {}\n",
-                manga_data.id.to_string(),
-                manga_title,
-                manga_authors
-            );
+        let click_controller = gtk::GestureClick::builder()
+            .button(0) // All buttons
+            .build();
+
+        let click_timeout_id: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
+
+        click_controller.connect_pressed(move |gesture, press_count, _x, _y| {
+            let button = gesture.current_button();
+
+            if let Some(timeout_id) = click_timeout_id.borrow_mut().take() {
+                timeout_id.remove();
+            }
+            match (button, press_count) {
+                (1, 1) => {
+                    // Left button, single click
+                    let timeout_id = click_timeout_id.clone();
+                    let manga_title = manga_title.clone();
+                    let manga_authors = manga_authors.clone();
+
+                    let timeout =
+                        glib::timeout_add_local(std::time::Duration::from_millis(250), move || {
+                            println!(
+                                "{:0>3}:\n    {}\n    {}\n",
+                                manga_data.id.to_string(),
+                                manga_title,
+                                manga_authors
+                            );
+
+                            *timeout_id.borrow_mut() = None;
+                            glib::ControlFlow::Break
+                        });
+                    *click_timeout_id.borrow_mut() = Some(timeout);
+                }
+                (1, 2) => {
+                    // Left button. double click
+                    println!("Double click!");
+                }
+                (3, 1) => {
+                    println!("Right button, single click");
+                    // Right button, single click
+                }
+                _ => (),
+            }
         });
         self.add_controller(click_controller);
     }
