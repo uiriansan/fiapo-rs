@@ -29,10 +29,10 @@ progressbar progress {
     border-radius: 5px;
 }
 
-scrolledwindow {
+/* scrolledwindow {
     padding: 0px;
     margin-bottom: 20px;
-}
+} */
 scrolledwindow overshoot {
     background: none;
     background-color: transparent;
@@ -48,7 +48,7 @@ scrolledwindow undershoot {
 
 entry {
     padding: 5px 10px;
-    border-radius: 5px;
+    border-radius: 10px;
     background-color: var(--background-light);
     transition: 0.5s background-color;
 }
@@ -59,7 +59,7 @@ entry selection {
 
 button label {
     padding: 5px 10px;
-    border-radius: 5px;
+    border-radius: 10px;
     background-color: var(--background-light);
     transition: 0.5s background-color;
 }
@@ -74,11 +74,20 @@ scrollbar trough {
 scrollbar slider {
     background-color: var(--background-light);
     min-width: 5px;
-    border-radius: 5px;
+    border-radius: 10px;
 }
 
 tooltip {
     padding: 10px;
     background-color: var(--background-dark);
     border: 0.5px solid var(--text);
+}
+
+spinner {
+    color: var(--background-light);
+    min-width: 15px;
+    min-height: 15px;
+}
+spinner:checked {
+    color: var(--text);
 }

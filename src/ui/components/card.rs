@@ -16,7 +16,9 @@ mod card_imp {
 
     #[derive(Default)]
     pub struct CardExt {
+        pub cover_stack: OnceCell<gtk::Stack>,
         pub cover_picture: OnceCell<gtk::Picture>,
+        pub cover_spinner: OnceCell<gtk::Spinner>,
         pub title_label: OnceCell<gtk::Label>,
         pub author_label: OnceCell<gtk::Label>,
     }
@@ -45,9 +47,30 @@ mod card_imp {
             card.add_css_class("manga-card");
             card.set_cursor(gtk::gdk::Cursor::from_name("pointer", None).as_ref());
 
+            let cover_stack = gtk::Stack::builder()
+                .width_request(130)
+                .height_request(165)
+                .hexpand(false)
+                .vexpand(false)
+                .halign(gtk::Align::Center)
+                .valign(gtk::Align::Start)
+                .build();
+            cover_stack.add_css_class("manga-card-cover-stack");
+
+            let cover_spinner = gtk::Spinner::builder()
+                .spinning(true)
+                .width_request(25)
+                .height_request(25)
+                .valign(gtk::Align::Center)
+                .halign(gtk::Align::Center)
+                .hexpand(false)
+                .vexpand(false)
+                .build();
+            cover_spinner.add_css_class("manga-card-cover-spinner");
+
             let cover_picture = gtk::Picture::builder()
                 .width_request(130)
-                .height_request(160)
+                .height_request(165)
                 .can_shrink(true)
                 .hexpand(false)
                 .vexpand(false)
@@ -81,13 +104,23 @@ mod card_imp {
                 .build();
             author_label.add_css_class("manga-card-author");
 
-            card.append(&cover_picture);
+            cover_stack.add_named(&cover_picture, Some("picture"));
+            cover_stack.add_named(&cover_spinner, Some("spinner"));
+            cover_stack.set_visible_child_name("spinner");
+
+            card.append(&cover_stack);
             card.append(&title_label);
             card.append(&author_label);
 
+            self.cover_stack
+                .set(cover_stack)
+                .expect("'cover_stack' is already set");
             self.cover_picture
                 .set(cover_picture)
                 .expect("'cover_picture' is already set");
+            self.cover_spinner
+                .set(cover_spinner)
+                .expect("'cover_spinner' is already set");
             self.title_label
                 .set(title_label)
                 .expect("'title_label' is already set");
@@ -107,8 +140,14 @@ impl Card {
         Object::builder().build()
     }
 
+    pub fn get_cover_stack(&self) -> Option<&gtk::Stack> {
+        self.imp().cover_stack.get()
+    }
     pub fn get_cover_picture(&self) -> Option<&gtk::Picture> {
         self.imp().cover_picture.get()
+    }
+    pub fn get_cover_spinner(&self) -> Option<&gtk::Spinner> {
+        self.imp().cover_spinner.get()
     }
     pub fn get_title_label(&self) -> Option<&gtk::Label> {
         self.imp().title_label.get()
@@ -118,18 +157,28 @@ impl Card {
     }
 
     pub fn update(&self, manga_data: MangadexSearchData) {
-        if let Some(cover_picture) = self.get_cover_picture() {
+        if let Some(_cover_picture) = self.get_cover_picture() {
             let cover_url = manga_data.cover_url;
-            let cover_clone = fragile::Fragile::new(cover_picture.clone());
+            let self_clone = fragile::Fragile::new(self.clone());
+
             thread::spawn(move || {
                 let texture_result = Card::texture_from_url(String::from(&cover_url));
 
-                if let Ok(texture) = texture_result {
-                    glib::MainContext::default().invoke(move || {
-                        cover_clone.get().set_paintable(Some(&texture));
-                    });
-                } else {
-                    eprintln!("Failed to load texture from {}", cover_url);
+                match texture_result {
+                    Ok(texture) => glib::MainContext::default().invoke(move || {
+                        if let Some(cover_picture) = self_clone.get().get_cover_picture() {
+                            cover_picture.set_paintable(Some(&texture));
+                        }
+                        if let Some(spinner) = self_clone.get().get_cover_spinner() {
+                            spinner.stop();
+                        }
+                        if let Some(stack) = self_clone.get().get_cover_stack() {
+                            stack.set_visible_child_name("picture");
+                        }
+                    }),
+                    Err(e) => {
+                        eprintln!("Failed to load texture from {}: {}", cover_url, e);
+                    }
                 }
             });
         }
@@ -191,10 +240,10 @@ impl Card {
                 }
                 (1, 2) => {
                     // Left button. double click
-                    println!("Double click!");
+                    println!("Open reader");
                 }
                 (3, 1) => {
-                    println!("Right button, single click");
+                    println!("Context menu");
                     // Right button, single click
                 }
                 _ => (),
@@ -218,7 +267,7 @@ impl Card {
         let pixbuf = gdk_pixbuf::Pixbuf::from_stream_at_scale(
             &img_stream,
             130,
-            185,
+            165,
             true,
             Some(&gio::Cancellable::new()),
         )?;

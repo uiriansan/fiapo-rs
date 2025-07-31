@@ -62,9 +62,6 @@ impl FiapoController {
             window.set_child(Some(&stack));
             window.present();
         }
-
-        // debug!("{:?}", controller.borrow());
-        // debug!("");
     }
 
     pub fn go_home(&self) {

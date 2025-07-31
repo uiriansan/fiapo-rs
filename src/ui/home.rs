@@ -27,6 +27,7 @@ impl Home {
     pub fn new(controller: Rc<RefCell<FiapoController>>) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 20);
         let is_searching = Arc::new(AtomicBool::new(false));
+
         Self {
             controller: controller,
             container: container,
@@ -114,13 +115,13 @@ impl Home {
         manga_search_bar.set_hexpand(true);
         manga_search_bar.set_placeholder_text(Some("Search for mangas..."));
 
-        let headercontainer = gtk::Box::new(gtk::Orientation::Horizontal, 20);
+        let headercontainer = gtk::Box::new(gtk::Orientation::Horizontal, 10);
         headercontainer.set_vexpand(false);
         headercontainer.append(&manga_search_bar);
         headercontainer.append(&open_button);
-        headercontainer.set_margin_top(20);
-        headercontainer.set_margin_end(20);
-        headercontainer.set_margin_start(20);
+        headercontainer.set_margin_top(10);
+        headercontainer.set_margin_end(10);
+        headercontainer.set_margin_start(10);
 
         self.container.append(&headercontainer);
 
@@ -145,7 +146,7 @@ impl Home {
                     is_searching.store(true, std::sync::atomic::Ordering::Relaxed);
 
                     let loading_label = Label::new(Some("Searching..."));
-                    loading_label.set_margin_top(50);
+                    scroll.set_child(Some(&loading_label));
 
                     glib::MainContext::default().spawn_local(clone!(
                         #[strong]
@@ -160,7 +161,7 @@ impl Home {
                                 Ok(mangas) => {
                                     if mangas.is_empty() {
                                         let no_results_label = Label::new(Some("No results found"));
-                                        no_results_label.set_margin_top(50);
+                                        scroll.set_child(Some(&no_results_label));
                                     } else {
                                         let manga_objects: Vec<MangadexSearchDataObject> = mangas
                                             .into_iter()
@@ -194,13 +195,12 @@ impl Home {
                                 Err(e) => {
                                     let error_label =
                                         Label::new(Some(&format!("Search failed: {}", e)));
-                                    error_label.set_margin_top(50);
+                                    scroll.set_child(Some(&error_label));
                                 }
                             }
                             is_searching.store(false, std::sync::atomic::Ordering::Relaxed);
                         }
                     ));
-                } else {
                 }
             }
         ));
