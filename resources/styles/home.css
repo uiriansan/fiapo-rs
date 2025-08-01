@@ -19,10 +19,28 @@
 .manga-card-cover {
     border-radius: 10px;
 }
+.manga-card-cover-box {
+    background: linear-gradient(
+        0deg,
+        var(--background-dark) 30%,
+        var(--background-light) 50%,
+        var(--background-dark) 70%
+    );
+    background-size: 100% 500%;
+    animation: shimmer 1s infinite linear;
+}
 .manga-card-title {
     font-weight: bold;
 }
 .manga-card-author {
     font-size: 0.8em;
     color: var(--dim-text);
+}
+@keyframes shimmer {
+    0% {
+        background-position: 100% 100%;
+    }
+    100% {
+        background-position: 0 0;
+    }
 }
