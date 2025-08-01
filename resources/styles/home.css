@@ -4,7 +4,6 @@
 
 .manga-card {
     margin: 5px;
-    padding: 10px;
     background-color: var(--background-dark);
     border: 2px solid transparent;
     border-radius: 10px;
@@ -18,8 +17,10 @@
 }
 .manga-card-cover {
     border-radius: 10px;
+    min-height: 170px;
 }
 .manga-card-cover-box {
+    border-radius: 10px;
     background: linear-gradient(
         0deg,
         var(--background-dark) 30%,
@@ -36,11 +37,6 @@
     font-size: 0.8em;
     color: var(--dim-text);
 }
-@keyframes shimmer {
-    0% {
-        background-position: 100% 100%;
-    }
-    100% {
-        background-position: 0 0;
-    }
+.manga-card-labels-box {
+    padding: 10px;
 }

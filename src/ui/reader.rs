@@ -1,10 +1,10 @@
 use crate::app::FiapoController;
+use crate::core::image;
 use glib::clone;
 use gtk::gdk::Key;
 use gtk::prelude::{ButtonExt, OrientableExt, WidgetExt};
-use gtk::{CenterBox, Picture, gdk, gdk_pixbuf, glib};
+use gtk::{CenterBox, Picture, glib};
 use gtk4 as gtk;
-use image::DynamicImage;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -72,7 +72,7 @@ impl Reader {
     fn prev_page(&mut self) {
         match self.controller.borrow_mut().server.get_prev_page() {
             Some(page) => {
-                if let Ok(texture) = self.dynamic_image_to_texture(page) {
+                if let Ok(texture) = image::dynamic_image_to_texture(page) {
                     self.picture.set_paintable(Some(&texture));
                 }
             }
@@ -83,40 +83,11 @@ impl Reader {
     fn next_page(&mut self) {
         match self.controller.borrow_mut().server.get_next_page() {
             Some(page) => {
-                if let Ok(texture) = self.dynamic_image_to_texture(page) {
+                if let Ok(texture) = image::dynamic_image_to_texture(page) {
                     self.picture.set_paintable(Some(&texture));
                 }
             }
             _ => {}
         }
-    }
-
-    fn dynamic_image_to_pixbuf(
-        &self,
-        img: &DynamicImage,
-    ) -> Result<gdk_pixbuf::Pixbuf, glib::Error> {
-        let rgba_img = img.to_rgba8();
-        let (width, height) = rgba_img.dimensions();
-        let bytes = rgba_img.into_raw();
-        let pixbuf = gdk_pixbuf::Pixbuf::from_bytes(
-            &glib::Bytes::from(&bytes),
-            gdk_pixbuf::Colorspace::Rgb,
-            true, // alpha
-            8,    // bits per pixel
-            width as i32,
-            height as i32,
-            (width * 4) as i32,
-        );
-        Ok(pixbuf)
-    }
-
-    // Convert a DynamicImage from the Image crate to Gdk.Texture
-    pub fn dynamic_image_to_texture(
-        &self,
-        img: &DynamicImage,
-    ) -> Result<gdk::Texture, glib::Error> {
-        let pixbuf = self.dynamic_image_to_pixbuf(&img).unwrap();
-        let texture = gdk::Texture::for_pixbuf(&pixbuf);
-        Ok(texture)
     }
 }

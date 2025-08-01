@@ -3,16 +3,17 @@ use glib::Object;
 use glib::subclass::prelude::*;
 use gtk::prelude::*;
 use gtk::subclass::{box_::BoxImpl, widget::WidgetImpl};
-use gtk::{gdk, gdk_pixbuf, gio, glib};
+use gtk::{gdk, glib};
 use gtk4 as gtk;
+use image::ImageReader;
 use std::cell::{OnceCell, RefCell};
 use std::rc::Rc;
 use std::thread;
 
 use crate::server::MangadexSearchData;
 
-const CARD_COVER_WIDTH: i32 = 130;
-const CARD_COVER_HEIGHT: i32 = 170;
+const CARD_COVER_WIDTH: i32 = 170;
+const CARD_COVER_HEIGHT: i32 = 220;
 
 mod card_imp {
     use super::*;
@@ -42,7 +43,8 @@ mod card_imp {
             let card = self.obj();
 
             card.set_orientation(gtk::Orientation::Vertical);
-            card.set_spacing(10);
+            card.set_width_request(CARD_COVER_WIDTH);
+            card.set_spacing(0);
             card.set_hexpand(false);
             card.set_vexpand(false);
             card.add_css_class("manga-card");
@@ -52,10 +54,8 @@ mod card_imp {
                 .width_request(CARD_COVER_WIDTH)
                 .height_request(CARD_COVER_HEIGHT)
                 .can_shrink(true)
-                .hexpand(false)
+                .hexpand(true)
                 .vexpand(false)
-                .halign(gtk::Align::Center)
-                .valign(gtk::Align::Start)
                 .content_fit(gtk::ContentFit::Cover)
                 .build();
             cover_picture.add_css_class("manga-card-cover");
@@ -63,7 +63,7 @@ mod card_imp {
             let cover_box = gtk::Box::builder()
                 .width_request(CARD_COVER_WIDTH)
                 .height_request(CARD_COVER_HEIGHT)
-                .hexpand(false)
+                .hexpand(true)
                 .vexpand(false)
                 .halign(gtk::Align::Center)
                 .valign(gtk::Align::Start)
@@ -76,8 +76,9 @@ mod card_imp {
                 .wrap(true)
                 .justify(gtk::Justification::Center)
                 .halign(gtk::Align::Center)
-                .valign(gtk::Align::End)
+                .valign(gtk::Align::Baseline)
                 .ellipsize(gtk::pango::EllipsizeMode::End)
+                .hexpand(false)
                 .lines(2)
                 .max_width_chars(25)
                 .build();
@@ -91,13 +92,22 @@ mod card_imp {
                 .valign(gtk::Align::End)
                 .ellipsize(gtk::pango::EllipsizeMode::End)
                 .lines(1)
+                .hexpand(false)
                 .max_width_chars(25)
                 .build();
             author_label.add_css_class("manga-card-author");
 
+            let labels_box = gtk::Box::builder()
+                .orientation(gtk::Orientation::Vertical)
+                .hexpand(false)
+                .vexpand(true)
+                .build();
+            labels_box.add_css_class("manga-card-labels-box");
+            labels_box.append(&title_label);
+            labels_box.append(&author_label);
+
             card.append(&cover_box);
-            card.append(&title_label);
-            card.append(&author_label);
+            card.append(&labels_box);
 
             self.cover_picture
                 .set(cover_picture)
@@ -235,15 +245,12 @@ impl Card {
         }
         let img_data = result.bytes()?;
 
-        let img_stream = gio::MemoryInputStream::from_bytes(&glib::Bytes::from(&img_data));
-        let pixbuf = gdk_pixbuf::Pixbuf::from_stream_at_scale(
-            &img_stream,
-            CARD_COVER_WIDTH,
-            CARD_COVER_HEIGHT,
-            true,
-            Some(&gio::Cancellable::new()),
-        )?;
+        let image = ImageReader::new(std::io::Cursor::new(img_data))
+            .with_guessed_format()?
+            .decode()?;
+        let scaled_image = image.thumbnail(CARD_COVER_WIDTH as u32, CARD_COVER_HEIGHT as u32);
 
+        let pixbuf = crate::core::image::dynamic_image_to_pixbuf(&scaled_image)?;
         Ok(gdk::Texture::for_pixbuf(&pixbuf))
     }
 }

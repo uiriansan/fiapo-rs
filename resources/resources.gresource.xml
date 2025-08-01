@@ -8,7 +8,12 @@
 
 <?xml version="1.0" encoding="UTF-8" ?>
 <gresources>
-  <gresource prefix="/github/uiriansan/fiapo/">
-    <file compressed="true" preprocess="xml-stripblanks">...</file>
+  <gresource prefix="/github/uiriansan/fiapo">
+    <file compressed="true">styles/main.css</file>
+    <file compressed="true">styles/vars.css</file>
+    <file compressed="true">styles/home.css</file>
+    <file compressed="true">styles/reader.css</file>
+    <file compressed="true">styles/settings.css</file>
+    <file>images/cover_image_404.png</file>
   </gresource>
 </gresources>

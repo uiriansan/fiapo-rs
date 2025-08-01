@@ -1,6 +1,6 @@
 use env_logger::Env;
 use gtk::prelude::*;
-use gtk::{Application, glib};
+use gtk::{Application, gio, glib};
 use gtk4 as gtk;
 use std::cell::RefCell;
 use std::io::Write;
@@ -19,6 +19,8 @@ const CSS_FILE: &str = "../resources/styles/main.css";
 #[tokio::main]
 async fn main() -> glib::ExitCode {
     init_logger();
+
+    gio::resources_register_include!("resources.gresource").expect("Failed to load gresources");
 
     let application = Application::builder().application_id(APP_ID).build();
 

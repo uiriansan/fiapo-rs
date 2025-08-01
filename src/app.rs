@@ -3,7 +3,7 @@ use crate::core::reader::Server;
 use crate::ui::home::Home;
 use crate::ui::reader::Reader;
 use gtk::prelude::GtkWindowExt;
-use gtk::{Application, ApplicationWindow, Stack, gdk, gio};
+use gtk::{Application, ApplicationWindow, Stack, gdk};
 use gtk4 as gtk;
 use log::{error, info};
 use std::cell::RefCell;
@@ -104,7 +104,7 @@ impl FiapoController {
                 if let Ok(working_dir) = fs::canonicalize(&srcdir) {
                     let css_path = working_dir.join(file_path);
                     let provider = gtk::CssProvider::new();
-                    provider.load_from_file(&gio::File::for_path(&css_path));
+                    provider.load_from_resource("/github/uiriansan/fiapo/styles/main.css");
                     gtk::style_context_add_provider_for_display(
                         &display,
                         &provider,
